@@ -4,7 +4,7 @@ export interface ColorDrop {
   color: string;
   colorIndex: number;
   speed: number;
-  type: 'normal' | 'golden' | 'black' | 'rainbow';
+  type: 'normal' | 'golden' | 'black' | 'rainbow' | 'heart';
   id: string;
 }
 
@@ -42,6 +42,9 @@ export interface GameState {
   isRainShower: boolean;
   rainShowerEndTime: number;
   nextRainShowerTime: number;
+  perfectRainbowProgress: number; // Track progress within current rainbow
+  showPerfectRainbowLost: boolean;
+  perfectRainbowLostTime: number;
 }
 
 export interface PowerUp {
@@ -58,6 +61,3 @@ export const RAINBOW_COLORS = [
   { name: 'Indigo', color: '#4B0082', index: 5 },
   { name: 'Violet', color: '#9400D3', index: 6 },
 ];
-
-export const NEXT_RAIN_SHOWER_TIME = 30000; // 30 seconds
-export const RAIN_SHOWER_DURATION = 5000; // 5 seconds

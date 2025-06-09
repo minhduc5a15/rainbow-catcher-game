@@ -3,14 +3,15 @@
 import { useRef, useCallback } from 'react';
 import type { ColorDrop } from '../types/game';
 import { RAINBOW_COLORS } from '../types/game';
+import { GAME_CONSTANTS } from '../constants/game';
 
 export function useDropSystem() {
   const colorDropsRef = useRef<ColorDrop[]>([]);
   const lastDropTimeRef = useRef(0);
   const dropIdCounter = useRef(0);
 
-  const createDrop = useCallback((gameSpeed: number, isRainShower = false): ColorDrop => {
-    const dropType = getRandomDropType();
+  const createDrop = useCallback((gameSpeed: number, isRainShower = false, perfectRainbowCount = 0): ColorDrop => {
+    const dropType = getRandomDropType(perfectRainbowCount);
     let color: string;
     let colorIndex: number;
 
@@ -27,16 +28,20 @@ export function useDropSystem() {
         color = '#FFFFFF';
         colorIndex = -3;
         break;
+      case 'heart':
+        color = '#FF69B4';
+        colorIndex = -4;
+        break;
       default:
         const randomColor = RAINBOW_COLORS[Math.floor(Math.random() * RAINBOW_COLORS.length)];
         color = randomColor.color;
         colorIndex = randomColor.index;
     }
 
-    const speed = (2 + gameSpeed * 0.5) * (isRainShower ? 1.5 : 1);
+    const speed = (GAME_CONSTANTS.DROP_BASE_SPEED + gameSpeed * 0.5) * (isRainShower ? GAME_CONSTANTS.RAIN_SPEED_MULTIPLIER : 1);
 
     return {
-      x: Math.random() * 760 + 20,
+      x: Math.random() * (GAME_CONSTANTS.CANVAS_WIDTH - 40) + 20,
       y: -10,
       color,
       colorIndex,
@@ -46,29 +51,37 @@ export function useDropSystem() {
     };
   }, []);
 
-  const getRandomDropType = useCallback((): ColorDrop['type'] => {
+  const getRandomDropType = useCallback((perfectRainbowCount: number): ColorDrop['type'] => {
     const rand = Math.random();
-    if (rand < 0.02) return 'rainbow'; // 2% chance
-    if (rand < 0.08) return 'golden'; // 6% chance
-    if (rand < 0.15) return 'black'; // 7% chance
-    return 'normal'; // 85% chance
+
+    // Heart drops only appear if player has earned enough perfect rainbows and hasn't received hearts yet
+    const canDropHeart = perfectRainbowCount > 0 && perfectRainbowCount % GAME_CONSTANTS.HEARTS_PER_PERFECT_RAINBOWS === 0;
+
+    // Add a flag to track if hearts have been dropped for this milestone
+    const heartMilestone = Math.floor(perfectRainbowCount / GAME_CONSTANTS.HEARTS_PER_PERFECT_RAINBOWS);
+
+    if (canDropHeart && rand < GAME_CONSTANTS.HEART_DROP_CHANCE) return 'heart';
+    if (rand < GAME_CONSTANTS.RAINBOW_DROP_CHANCE) return 'rainbow';
+    if (rand < GAME_CONSTANTS.GOLDEN_DROP_CHANCE) return 'golden';
+    if (rand < GAME_CONSTANTS.BLACK_DROP_CHANCE) return 'black';
+    return 'normal';
   }, []);
 
   const spawnDrop = useCallback(
-    (gameSpeed: number, isRainShower = false) => {
-      const newDrop = createDrop(gameSpeed, isRainShower);
+    (gameSpeed: number, isRainShower = false, perfectRainbowCount = 0) => {
+      const newDrop = createDrop(gameSpeed, isRainShower, perfectRainbowCount);
       colorDropsRef.current.push(newDrop);
     },
     [createDrop],
   );
 
   const updateDrops = useCallback(
-    (gameSpeed: number, isRainShower = false) => {
+    (gameSpeed: number, isRainShower = false, perfectRainbowCount = 0) => {
       const now = Date.now();
       const spawnRate = isRainShower ? 200 : 1000 / gameSpeed;
 
       if (now - lastDropTimeRef.current > spawnRate) {
-        spawnDrop(gameSpeed, isRainShower);
+        spawnDrop(gameSpeed, isRainShower, perfectRainbowCount);
         lastDropTimeRef.current = now;
       }
 

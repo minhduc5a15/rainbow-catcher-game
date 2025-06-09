@@ -1,20 +1,16 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
 
 export default function GameRules() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-lg">
-            🌈 Rainbow Catcher Rules 🌈
-          </h1>
-          <p className="text-xl text-white/90">
-            Learn how to master the rainbow!
-          </p>
+          <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-lg">🌈 Rainbow Catcher Rules 🌈</h1>
+          <p className="text-xl text-white/90">Learn how to master the rainbow!</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -31,10 +27,7 @@ export default function GameRules() {
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">🌈</span>
-                  <span>
-                    Catch rainbow colors in order: Red → Orange → Yellow → Green
-                    → Blue → Indigo → Violet
-                  </span>
+                  <span>Catch rainbow colors in order: Red → Orange → Yellow → Green → Blue → Indigo → Violet</span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">💯</span>
@@ -42,7 +35,7 @@ export default function GameRules() {
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">❤️</span>
-                  <span>You have 3 lives - don't lose them all!</span>
+                  <span>You have 3 lives - lose them by hitting bombs!</span>
                 </p>
               </div>
             </CardContent>
@@ -64,14 +57,19 @@ export default function GameRules() {
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">💣</span>
                   <span>
-                    <strong>Black Drop:</strong> Lose 1 life & reset combo
+                    <strong>Black Drop:</strong> Lose 1 life & reset rainbow progress
                   </span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">🌈</span>
                   <span>
-                    <strong>Rainbow Drop:</strong> Auto-collect all colors for 3
-                    seconds
+                    <strong>Rainbow Drop:</strong> Auto-collect all colors for 3 seconds
+                  </span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-2xl">❤️</span>
+                  <span>
+                    <strong>Heart Drop:</strong> Gain 1 life (max 3 lives)
                   </span>
                 </p>
                 <p className="flex items-center gap-2">
@@ -82,10 +80,10 @@ export default function GameRules() {
             </CardContent>
           </Card>
 
-          {/* Perfect Rainbow Bonus */}
+          {/* Perfect Rainbow System */}
           <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-300">
             <CardHeader className="bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-t-lg">
-              <CardTitle className="text-2xl">🏆 Perfect Rainbow</CardTitle>
+              <CardTitle className="text-2xl">🏆 Perfect Rainbow System</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="space-y-3">
@@ -102,8 +100,12 @@ export default function GameRules() {
                   <span>Activate 3-second auto-collect power-up</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-2xl">🎆</span>
-                  <span>Spectacular particle explosion effect</span>
+                  <span className="text-2xl">💔</span>
+                  <span>Progress resets if you miss target color or hit bomb</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-2xl">❤️</span>
+                  <span>Every 3 perfect rainbows = 1 heart drop</span>
                 </p>
               </div>
             </CardContent>
@@ -132,10 +134,41 @@ export default function GameRules() {
                   <span className="text-2xl">🌩️</span>
                   <span>Sky darkens with rain animation</span>
                 </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-2xl">🌈</span>
+                  <span>Background changes to match weather</span>
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Game Over Conditions */}
+        <Card className="mt-6 bg-white/90 backdrop-blur-sm border-2 border-red-300">
+          <CardHeader className="bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-t-lg">
+            <CardTitle className="text-2xl">💀 Game Over Conditions</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid gap-3 md:grid-cols-2">
+              <p className="flex items-center gap-2">
+                <span className="text-xl">💣</span>
+                <span>Hit 3 bombs and lose all lives</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">❤️</span>
+                <span>No penalty for missing wrong colors</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">🔄</span>
+                <span>Rainbow progress resets on mistakes</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">🎯</span>
+                <span>Only target color misses affect progress</span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tips Section */}
         <Card className="mt-6 bg-white/90 backdrop-blur-sm border-2 border-yellow-300">

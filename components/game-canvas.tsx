@@ -3,32 +3,30 @@
 import { useCallback } from 'react';
 import type { Cloud, ColorDrop, GameState } from '../types/game';
 import { RAINBOW_COLORS } from '../types/game';
-
-interface GameCanvasProps {
-  gameState: GameState;
-  cloud: Cloud;
-  colorDrops: ColorDrop[];
-  updateAndDrawParticles: (ctx: CanvasRenderingContext2D) => void;
-}
+import { GAME_CONSTANTS } from '../constants/game';
 
 export function useGameCanvas() {
   const drawCloud = useCallback((ctx: CanvasRenderingContext2D, cloud: Cloud, isDamaged = false) => {
-    // Add speed boost glow effect
+    // Add speed boost glow effect - FIXED
     if (cloud.speedMultiplier > 1) {
       ctx.shadowColor = '#FFD700';
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 25;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
     }
 
     // Add damage flash effect
     if (isDamaged) {
       ctx.shadowColor = '#FF0000';
       ctx.shadowBlur = 25;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
     }
 
     // Enhanced cloud drawing with more realistic shape
-    ctx.fillStyle = isDamaged ? '#FFB3B3' : '#FFFFFF';
-    ctx.strokeStyle = isDamaged ? '#FF6666' : '#E0E0E0';
-    ctx.lineWidth = 2;
+    ctx.fillStyle = isDamaged ? '#FFB3B3' : cloud.speedMultiplier > 1 ? '#FFFACD' : '#FFFFFF';
+    ctx.strokeStyle = isDamaged ? '#FF6666' : cloud.speedMultiplier > 1 ? '#FFD700' : '#E0E0E0';
+    ctx.lineWidth = cloud.speedMultiplier > 1 ? 3 : 2;
 
     // Main cloud body with multiple overlapping circles for fluffy effect
     ctx.beginPath();
@@ -88,7 +86,10 @@ export function useGameCanvas() {
       ctx.stroke();
     }
 
+    // Reset shadow
     ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
   }, []);
 
   const drawColorDrop = useCallback((ctx: CanvasRenderingContext2D, drop: ColorDrop, isTargetColor = false) => {
@@ -103,7 +104,7 @@ export function useGameCanvas() {
       ctx.lineWidth = 3;
       ctx.globalAlpha = 0.6;
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, 12 + pulseSize, 0, Math.PI * 2);
+      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.LARGE_DROP_RADIUS + pulseSize, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
@@ -118,7 +119,7 @@ export function useGameCanvas() {
       ctx.shadowBlur = 10;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, 10, 0, Math.PI * 2);
+      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -141,7 +142,7 @@ export function useGameCanvas() {
       ctx.shadowBlur = 15 * dangerPulse;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, 10, 0, Math.PI * 2);
+      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -160,7 +161,7 @@ export function useGameCanvas() {
       ctx.shadowBlur = 20;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, 12, 0, Math.PI * 2);
+      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.LARGE_DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -173,13 +174,31 @@ export function useGameCanvas() {
       ctx.rotate(time * 0.1);
       ctx.fillText('🌈', 0, 0);
       ctx.restore();
+    } else if (drop.type === 'heart') {
+      // Heart drop with pulsing effect
+      const heartPulse = 1 + Math.sin(Date.now() * 0.02) * 0.2;
+      ctx.fillStyle = drop.color;
+      ctx.strokeStyle = '#FF1493';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#FF69B4';
+      ctx.shadowBlur = 15;
+
+      ctx.beginPath();
+      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * heartPulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('❤️', drop.x, drop.y + 4);
     } else {
       // Enhanced normal drop
       ctx.fillStyle = drop.color;
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, 8, 0, Math.PI * 2);
+      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -193,52 +212,121 @@ export function useGameCanvas() {
     ctx.shadowBlur = 0;
   }, []);
 
-  const drawRainbowProgressBar = useCallback((ctx: CanvasRenderingContext2D, nextColorIndex: number, perfectCount: number) => {
-    const barWidth = 300;
-    const barHeight = 20;
-    const barX = 250;
-    const barY = 25;
+  const drawRainbowProgressBar = useCallback((ctx: CanvasRenderingContext2D, nextColorIndex: number, perfectCount: number, showLostMessage = false) => {
+    const barWidth = GAME_CONSTANTS.PROGRESS_BAR_WIDTH;
+    const barHeight = GAME_CONSTANTS.PROGRESS_BAR_HEIGHT;
+    const barX = GAME_CONSTANTS.PROGRESS_BAR_X;
+    const barY = GAME_CONSTANTS.PROGRESS_BAR_Y;
 
-    // Enhanced background with gradient
+    // Enhanced background with gradient and border
     const bgGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
-    bgGradient.addColorStop(0, '#444');
-    bgGradient.addColorStop(1, '#222');
+    bgGradient.addColorStop(0, '#2a2a2a');
+    bgGradient.addColorStop(1, '#1a1a1a');
     ctx.fillStyle = bgGradient;
+    ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+
+    // Inner background
+    ctx.fillStyle = '#333333';
     ctx.fillRect(barX, barY, barWidth, barHeight);
 
-    // Draw segments with glow effect
+    // Draw segments with enhanced effects
     const segmentWidth = barWidth / 7;
     for (let i = 0; i < 7; i++) {
+      const segmentX = barX + i * segmentWidth;
+
       if (i < nextColorIndex) {
-        ctx.fillStyle = RAINBOW_COLORS[i].color;
+        // Completed segments with glow
+        const gradient = ctx.createLinearGradient(segmentX, barY, segmentX, barY + barHeight);
+        gradient.addColorStop(0, RAINBOW_COLORS[i].color);
+        gradient.addColorStop(1, `${RAINBOW_COLORS[i].color}CC`);
+
+        ctx.fillStyle = gradient;
         ctx.shadowColor = RAINBOW_COLORS[i].color;
-        ctx.shadowBlur = 5;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
+
+        // Add shine effect
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, 3);
+      } else if (i === nextColorIndex) {
+        // Current target segment with pulsing effect
+        const pulse = 0.7 + Math.sin(Date.now() * 0.008) * 0.3;
+        ctx.fillStyle = `${RAINBOW_COLORS[i].color}${Math.floor(pulse * 255)
+          .toString(16)
+          .padStart(2, '0')}`;
+        ctx.shadowColor = RAINBOW_COLORS[i].color;
+        ctx.shadowBlur = 12;
+        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
+
+        // Animated border
+        ctx.strokeStyle = RAINBOW_COLORS[i].color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
       } else {
-        ctx.fillStyle = '#666';
+        // Incomplete segments
+        ctx.fillStyle = '#555555';
         ctx.shadowBlur = 0;
+        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
       }
-      ctx.fillRect(barX + i * segmentWidth, barY, segmentWidth, barHeight);
     }
 
-    // Enhanced border
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
+    // Enhanced border with gradient
+    const borderGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+    borderGradient.addColorStop(0, '#666666');
+    borderGradient.addColorStop(1, '#333333');
+    ctx.strokeStyle = borderGradient;
+    ctx.lineWidth = 2;
     ctx.shadowBlur = 0;
     ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-    // Enhanced label with background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(barX, barY - 20, barWidth, 18);
-    ctx.fillStyle = '#FFF';
+    // Segment dividers
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 7; i++) {
+      const dividerX = barX + i * segmentWidth;
+      ctx.beginPath();
+      ctx.moveTo(dividerX, barY);
+      ctx.lineTo(dividerX, barY + barHeight);
+      ctx.stroke();
+    }
+
+    // Enhanced label with better styling
+    const labelY = barY - 25;
+    const labelHeight = 20;
+
+    // Label background with gradient
+    const labelGradient = ctx.createLinearGradient(barX, labelY, barX, labelY + labelHeight);
+    labelGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+    labelGradient.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+    ctx.fillStyle = labelGradient;
+    ctx.fillRect(barX, labelY, barWidth, labelHeight);
+
+    // Label border
+    ctx.strokeStyle = '#444444';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, labelY, barWidth, labelHeight);
+
+    // Label text
+    ctx.fillStyle = '#FFFFFF';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Rainbow Progress (Perfect: ${perfectCount})`, barX + barWidth / 2, barY - 8);
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 2;
+
+    if (showLostMessage) {
+      ctx.fillStyle = '#FF6666';
+      ctx.fillText('Perfect Rainbow Lost! Starting Over...', barX + barWidth / 2, labelY + 14);
+    } else {
+      ctx.fillText(`Rainbow Progress (Perfect: ${perfectCount})`, barX + barWidth / 2, labelY + 14);
+    }
+
+    ctx.shadowBlur = 0;
   }, []);
 
   const drawBackground = useCallback(
-    (ctx: CanvasRenderingContext2D, gameState: GameState) => {
+    (ctx: CanvasRenderingContext2D, gameState: GameState, drawWeatherEffects?: (ctx: CanvasRenderingContext2D) => void) => {
       // Enhanced sky gradient with more colors
-      const gradient = ctx.createLinearGradient(0, 0, 0, 600);
+      const gradient = ctx.createLinearGradient(0, 0, 0, GAME_CONSTANTS.CANVAS_HEIGHT);
       if (gameState.isRainShower) {
         gradient.addColorStop(0, '#2D3748');
         gradient.addColorStop(0.5, '#4A5568');
@@ -250,21 +338,26 @@ export function useGameCanvas() {
         gradient.addColorStop(1, '#E0F6FF');
       }
       ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 800, 600);
+      ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
+
+      // Draw weather effects for normal weather
+      if (!gameState.isRainShower && drawWeatherEffects) {
+        drawWeatherEffects(ctx);
+      }
 
       // Enhanced rainbow arc with glow
-      const centerX = 400;
-      const centerY = 80;
-      const radius = 140;
+      const centerX = GAME_CONSTANTS.RAINBOW_CENTER_X;
+      const centerY = GAME_CONSTANTS.RAINBOW_CENTER_Y;
+      const radius = GAME_CONSTANTS.RAINBOW_BASE_RADIUS;
 
       for (let i = 0; i < RAINBOW_COLORS.length; i++) {
         ctx.strokeStyle = RAINBOW_COLORS[i].color;
-        ctx.lineWidth = 12;
+        ctx.lineWidth = GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH;
         ctx.shadowColor = RAINBOW_COLORS[i].color;
         ctx.shadowBlur = gameState.isRainShower ? 2 : 8;
         ctx.globalAlpha = gameState.isRainShower ? 0.2 : 0.6;
         ctx.beginPath();
-        ctx.arc(centerX, centerY, radius + i * 12, 0, Math.PI);
+        ctx.arc(centerX, centerY, radius + i * GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH, 0, Math.PI);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -275,8 +368,8 @@ export function useGameCanvas() {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.lineWidth = 2;
         for (let i = 0; i < 150; i++) {
-          const x = Math.random() * 800;
-          const y = (Date.now() * 0.8 + i * 15) % 620;
+          const x = Math.random() * GAME_CONSTANTS.CANVAS_WIDTH;
+          const y = (Date.now() * 0.8 + i * 15) % (GAME_CONSTANTS.CANVAS_HEIGHT + 20);
           ctx.beginPath();
           ctx.moveTo(x, y);
           ctx.lineTo(x - 8, y + 15);
@@ -284,7 +377,7 @@ export function useGameCanvas() {
         }
       }
 
-      drawRainbowProgressBar(ctx, gameState.nextColorIndex, gameState.perfectRainbowCount);
+      drawRainbowProgressBar(ctx, gameState.nextColorIndex, gameState.perfectRainbowCount, gameState.showPerfectRainbowLost);
     },
     [drawRainbowProgressBar],
   );
@@ -297,10 +390,11 @@ export function useGameCanvas() {
       colorDrops: ColorDrop[],
       updateAndDrawParticles: (ctx: CanvasRenderingContext2D) => void,
       updateAndDrawDamageTexts: (ctx: CanvasRenderingContext2D) => void,
+      drawWeatherEffects: (ctx: CanvasRenderingContext2D) => void,
       isDamaged = false,
     ) => {
-      ctx.clearRect(0, 0, 800, 600);
-      drawBackground(ctx, gameState);
+      ctx.clearRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
+      drawBackground(ctx, gameState, drawWeatherEffects);
 
       // Draw drops with target color highlighting
       colorDrops.forEach((drop) => {
@@ -318,7 +412,7 @@ export function useGameCanvas() {
         gradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
         gradient.addColorStop(1, 'rgba(255, 215, 0, 0.1)');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 800, 600);
+        ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
 
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 28px Arial';

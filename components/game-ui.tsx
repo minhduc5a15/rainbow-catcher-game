@@ -23,11 +23,12 @@ export function GameUI({ gameState, highScore, onStartGame, onResetGame, showGam
               🎮 Start Game
             </Button>
             <div className="text-sm text-gray-600 space-y-1">
-              <p>🎮 Use arrow keys or mouse to move the cloud</p>
+              <p>🖱️ Use mouse to move the cloud</p>
               <p>🌈 Catch colors in rainbow order for bonus points!</p>
               <p>⚡ Golden drops boost cloud speed</p>
               <p>💣 Avoid black drops (lose life)</p>
               <p>🌈 Rainbow drops auto-collect all colors</p>
+              <p>❤️ Heart drops give extra lives</p>
               <p>💀 Game over when you lose all 3 lives</p>
             </div>
           </div>
@@ -35,7 +36,7 @@ export function GameUI({ gameState, highScore, onStartGame, onResetGame, showGam
 
         {gameState.state === 'playing' && (
           <div className="text-sm text-gray-600 space-y-1">
-            <p>Use ← → arrow keys or mouse to move the cloud</p>
+            <p>Use mouse to move the cloud</p>
             {gameState.isRainShower && <p className="text-blue-600 font-bold animate-pulse">🌧️ RAIN SHOWER - DOUBLE POINTS!</p>}
           </div>
         )}
@@ -119,12 +120,7 @@ export function GameStats({ gameState }: GameStatsProps) {
       </div>
       <div className="text-sm bg-white px-3 py-1 rounded-full">
         Next Color:{' '}
-        <span
-          className="px-2 py-1 rounded text-white font-bold ml-1"
-          style={{
-            backgroundColor: RAINBOW_COLORS[gameState.nextColorIndex].color,
-          }}
-        >
+        <span className="px-2 py-1 rounded text-white font-bold ml-1" style={{ backgroundColor: RAINBOW_COLORS[gameState.nextColorIndex].color }}>
           {RAINBOW_COLORS[gameState.nextColorIndex].name}
         </span>
       </div>
