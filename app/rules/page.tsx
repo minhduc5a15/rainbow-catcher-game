@@ -23,7 +23,7 @@ export default function GameRules() {
               <div className="space-y-3">
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">☁️</span>
-                  <span>Control the cloud with arrow keys or mouse</span>
+                  <span>Control the cloud with mouse (click to lock cursor)</span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">🌈</span>
@@ -35,7 +35,7 @@ export default function GameRules() {
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">❤️</span>
-                  <span>You have 3 lives - lose them by hitting bombs!</span>
+                  <span>You have 3 lives - lose them by hitting bombs or hail!</span>
                 </p>
               </div>
             </CardContent>
@@ -58,6 +58,12 @@ export default function GameRules() {
                   <span className="text-2xl">💣</span>
                   <span>
                     <strong>Black Drop:</strong> Lose 1 life & reset rainbow progress
+                  </span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-2xl">❄️</span>
+                  <span>
+                    <strong>Hail Drop:</strong> Slows down cloud movement for 4 seconds
                   </span>
                 </p>
                 <p className="flex items-center gap-2">
@@ -101,7 +107,7 @@ export default function GameRules() {
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">💔</span>
-                  <span>Progress resets if you miss target color or hit bomb</span>
+                  <span>Progress resets if you hit bomb or hail</span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">❤️</span>
@@ -132,7 +138,7 @@ export default function GameRules() {
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">🌩️</span>
-                  <span>Sky darkens with rain animation</span>
+                  <span>Sky darkens with rain and lightning</span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">🌈</span>
@@ -160,11 +166,15 @@ export default function GameRules() {
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">🔄</span>
-                <span>Rainbow progress resets on mistakes</span>
+                <span>Rainbow progress resets on bomb/hail hits</span>
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">🎯</span>
-                <span>Only target color misses affect progress</span>
+                <span>Missing target colors doesn't affect progress</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">❄️</span>
+                <span>Hail slows you down but doesn't damage</span>
               </p>
             </div>
           </CardContent>
@@ -195,11 +205,38 @@ export default function GameRules() {
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">💣</span>
-                <span>Avoid black bombs at all costs</span>
+                <span>Avoid black bombs and hail at all costs</span>
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">🏆</span>
                 <span>Aim for perfect rainbows for big scores</span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Day/Night Cycle */}
+        <Card className="mt-6 bg-white/90 backdrop-blur-sm border-2 border-indigo-300">
+          <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-t-lg">
+            <CardTitle className="text-2xl">🌙 Day/Night Cycle</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid gap-3 md:grid-cols-2">
+              <p className="flex items-center gap-2">
+                <span className="text-xl">🌅</span>
+                <span>Game starts during the day</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">🌙</span>
+                <span>Night falls after 5 perfect rainbows</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">⭐</span>
+                <span>Stars twinkle in the night sky</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">🔄</span>
+                <span>Cycle continues every 5 perfect rainbows</span>
               </p>
             </div>
           </CardContent>

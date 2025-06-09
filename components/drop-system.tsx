@@ -32,6 +32,10 @@ export function useDropSystem() {
         color = '#FF69B4';
         colorIndex = -4;
         break;
+      case 'hail':
+        color = '#A5F2F3';
+        colorIndex = -5;
+        break;
       default:
         const randomColor = RAINBOW_COLORS[Math.floor(Math.random() * RAINBOW_COLORS.length)];
         color = randomColor.color;
@@ -64,6 +68,7 @@ export function useDropSystem() {
     if (rand < GAME_CONSTANTS.RAINBOW_DROP_CHANCE) return 'rainbow';
     if (rand < GAME_CONSTANTS.GOLDEN_DROP_CHANCE) return 'golden';
     if (rand < GAME_CONSTANTS.BLACK_DROP_CHANCE) return 'black';
+    if (rand < GAME_CONSTANTS.HAIL_DROP_CHANCE) return 'hail';
     return 'normal';
   }, []);
 

@@ -4,7 +4,7 @@ export interface ColorDrop {
   color: string;
   colorIndex: number;
   speed: number;
-  type: 'normal' | 'golden' | 'black' | 'rainbow' | 'heart';
+  type: 'normal' | 'golden' | 'black' | 'rainbow' | 'heart' | 'hail';
   id: string;
 }
 
@@ -39,17 +39,44 @@ export interface GameState {
   isAutoCollecting: boolean;
   autoCollectEndTime: number;
   cloudSpeedBoostEndTime: number;
+  cloudSlowEndTime: number; // New: Hail slow effect end time
   isRainShower: boolean;
   rainShowerEndTime: number;
   nextRainShowerTime: number;
   perfectRainbowProgress: number; // Track progress within current rainbow
   showPerfectRainbowLost: boolean;
   perfectRainbowLostTime: number;
+  isPointerLocked: boolean;
+  lightningFlash: boolean;
+  nextLightningTime: number;
+  showSpeedBoostMessage: boolean;
+  speedBoostMessageEndTime: number;
+  showAutoCollectMessage: boolean;
+  autoCollectMessageEndTime: number;
+  showSlowMessage: boolean; // New: Hail slow message
+  slowMessageEndTime: number; // New: Hail slow message end time
+  timeOfDay: 'day' | 'night'; // New: Day/night cycle
 }
 
 export interface PowerUp {
   type: 'speed' | 'autoCollect';
   endTime: number;
+}
+
+export interface BackgroundCloud {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  opacity: number;
+}
+
+export interface Star {
+  x: number;
+  y: number;
+  size: number;
+  twinkle: number;
+  brightness: number;
 }
 
 export const RAINBOW_COLORS = [

@@ -16,7 +16,7 @@ import { GAME_CONSTANTS } from '../constants/game';
 
 export default function RainbowCatcher() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameLoopRef = useRef<number>();
+  const gameLoopRef = useRef<number>(0);
   const mouseXRef = useRef<number>(0);
   const damageFlashRef = useRef<number>(0);
   const heartDroppedForMilestoneRef = useRef<Set<number>>(new Set());
@@ -32,12 +32,23 @@ export default function RainbowCatcher() {
     isAutoCollecting: false,
     autoCollectEndTime: 0,
     cloudSpeedBoostEndTime: 0,
+    cloudSlowEndTime: 0, // New
     isRainShower: false,
     rainShowerEndTime: 0,
     nextRainShowerTime: 0,
     perfectRainbowProgress: 0,
     showPerfectRainbowLost: false,
     perfectRainbowLostTime: 0,
+    isPointerLocked: false,
+    lightningFlash: false,
+    nextLightningTime: 0,
+    showSpeedBoostMessage: false,
+    speedBoostMessageEndTime: 0,
+    showAutoCollectMessage: false,
+    autoCollectMessageEndTime: 0,
+    showSlowMessage: false, // New
+    slowMessageEndTime: 0, // New
+    timeOfDay: 'day', // New
   });
 
   const [highScore, setHighScore] = useState(0);
@@ -54,7 +65,17 @@ export default function RainbowCatcher() {
   const { colorDropsRef, updateDrops, clearDrops } = useDropSystem();
   const { renderGame } = useGameCanvas();
   const { createDamageText, updateAndDrawDamageTexts, clearDamageTexts } = useDamageEffect();
-  const { updateWeatherEffects, drawWeatherEffects, clearWeatherEffects } = useWeatherEffects();
+  const {
+    updateWeatherEffects,
+    drawWeatherEffects,
+    clearWeatherEffects,
+    isLightningFlash,
+    initBackgroundClouds,
+    initWeatherElements,
+    initStars,
+    updateStars,
+    drawStars,
+  } = useWeatherEffects();
 
   const checkCollision = useCallback((cloud: Cloud, drop: ColorDrop): boolean => {
     const cloudCenterX = cloud.x;
@@ -138,8 +159,11 @@ export default function RainbowCatcher() {
       damageFlashRef.current--;
     }
 
-    // Update weather effects
+    // Update weather effects and stars
     updateWeatherEffects(gameState.isRainShower);
+    if (gameState.timeOfDay === 'night') {
+      updateStars();
+    }
 
     // Update power-ups and effects
     setGameState((prev) => {
@@ -147,7 +171,14 @@ export default function RainbowCatcher() {
 
       // Update cloud speed boost
       if (now > prev.cloudSpeedBoostEndTime) {
-        cloudRef.current.speedMultiplier = 1;
+        cloudRef.current.speedMultiplier = Math.max(cloudRef.current.speedMultiplier, 1);
+      }
+
+      // Update cloud slow effect
+      if (now > prev.cloudSlowEndTime) {
+        if (cloudRef.current.speedMultiplier < 1) {
+          cloudRef.current.speedMultiplier = 1;
+        }
       }
 
       // Update auto-collect
@@ -169,6 +200,26 @@ export default function RainbowCatcher() {
         newState.showPerfectRainbowLost = false;
       }
 
+      // Update power-up messages
+      if (prev.showSpeedBoostMessage && now > prev.speedBoostMessageEndTime) {
+        newState.showSpeedBoostMessage = false;
+      }
+
+      if (prev.showAutoCollectMessage && now > prev.autoCollectMessageEndTime) {
+        newState.showAutoCollectMessage = false;
+      }
+
+      if (prev.showSlowMessage && now > prev.slowMessageEndTime) {
+        newState.showSlowMessage = false;
+      }
+
+      // Check for day/night cycle change
+      const currentCycle = Math.floor(prev.perfectRainbowCount / GAME_CONSTANTS.PERFECT_RAINBOWS_FOR_NIGHT);
+      const newTimeOfDay = currentCycle % 2 === 0 ? 'day' : 'night';
+      if (newTimeOfDay !== prev.timeOfDay) {
+        newState.timeOfDay = newTimeOfDay;
+      }
+
       return newState;
     });
 
@@ -177,12 +228,13 @@ export default function RainbowCatcher() {
       autoCollectColors();
     }
 
-    // Update cloud position with mouse control only
+    // Update cloud position with improved mouse control
     const cloud = cloudRef.current;
     if (mouseXRef.current > 0) {
       const targetX = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, mouseXRef.current));
       const diff = targetX - cloud.x;
-      cloud.x += diff * GAME_CONSTANTS.MOUSE_RESPONSIVENESS * cloud.speedMultiplier;
+      const responsiveness = gameState.isPointerLocked ? GAME_CONSTANTS.MOUSE_RESPONSIVENESS_LOCKED : GAME_CONSTANTS.MOUSE_RESPONSIVENESS;
+      cloud.x += diff * responsiveness * cloud.speedMultiplier;
     }
 
     // Update drops - pass perfect rainbow count for heart drop logic
@@ -212,17 +264,31 @@ export default function RainbowCatcher() {
     setGameState((prev) => ({ ...prev, gameSpeed: Math.min(3, prev.gameSpeed + 0.001) }));
 
     // Render everything
-    renderGame(ctx, gameState, cloud, drops, updateAndDrawParticles, updateAndDrawDamageTexts, drawWeatherEffects, damageFlashRef.current > 0);
+    renderGame(
+      ctx,
+      gameState,
+      cloud,
+      drops,
+      updateAndDrawParticles,
+      updateAndDrawDamageTexts,
+      drawWeatherEffects,
+      drawStars,
+      isLightningFlash(),
+      damageFlashRef.current > 0,
+    );
   }, [
     gameState,
     updateDrops,
     updateWeatherEffects,
+    updateStars,
     checkCollision,
     autoCollectColors,
     renderGame,
     updateAndDrawParticles,
     updateAndDrawDamageTexts,
     drawWeatherEffects,
+    drawStars,
+    isLightningFlash,
   ]);
 
   const handleDropCatch = useCallback(
@@ -232,9 +298,14 @@ export default function RainbowCatcher() {
       if (drop.type === 'golden') {
         // Golden drop: speed boost
         cloudRef.current.speedMultiplier = GAME_CONSTANTS.CLOUD_SPEED_BOOST_MULTIPLIER;
-        setGameState((prev) => ({ ...prev, cloudSpeedBoostEndTime: now + GAME_CONSTANTS.SPEED_BOOST_DURATION }));
+        setGameState((prev) => ({
+          ...prev,
+          cloudSpeedBoostEndTime: now + GAME_CONSTANTS.SPEED_BOOST_DURATION,
+          showSpeedBoostMessage: true,
+          speedBoostMessageEndTime: now + 1500,
+        }));
       } else if (drop.type === 'black') {
-        // Black drop: lose life with damage effect and reset perfect rainbow
+        // Black bomb: lose life with damage effect and reset perfect rainbow
         damageFlashRef.current = GAME_CONSTANTS.DAMAGE_FLASH_DURATION;
         createDamageText(cloudRef.current.x, cloudRef.current.y - 30);
         createRainbowLostEffect(cloudRef.current.x, cloudRef.current.y);
@@ -249,6 +320,15 @@ export default function RainbowCatcher() {
           }
           return { ...prev, lives: newLives };
         });
+      } else if (drop.type === 'hail') {
+        // Hail: slow down cloud instead of losing life
+        cloudRef.current.speedMultiplier = GAME_CONSTANTS.CLOUD_SLOW_MULTIPLIER;
+        setGameState((prev) => ({
+          ...prev,
+          cloudSlowEndTime: now + GAME_CONSTANTS.HAIL_SLOW_DURATION,
+          showSlowMessage: true,
+          slowMessageEndTime: now + 1500,
+        }));
       } else if (drop.type === 'rainbow') {
         // Rainbow drop: auto-collect
         setGameState((prev) => ({
@@ -256,6 +336,8 @@ export default function RainbowCatcher() {
           isAutoCollecting: true,
           autoCollectEndTime: now + GAME_CONSTANTS.AUTO_COLLECT_DURATION,
           score: prev.score + GAME_CONSTANTS.RAINBOW_DROP_POINTS,
+          showAutoCollectMessage: true,
+          autoCollectMessageEndTime: now + 1500,
         }));
       } else if (drop.type === 'heart') {
         // Heart drop: gain life (max 3)
@@ -265,7 +347,7 @@ export default function RainbowCatcher() {
           score: prev.score + 20,
         }));
       } else {
-        // Normal drop
+        // Normal drop logic remains the same
         let points = GAME_CONSTANTS.NORMAL_DROP_POINTS;
         let perfectRainbow = false;
 
@@ -288,6 +370,8 @@ export default function RainbowCatcher() {
             perfectRainbowCount: perfectRainbow ? prev.perfectRainbowCount + 1 : prev.perfectRainbowCount,
             isAutoCollecting: perfectRainbow,
             autoCollectEndTime: perfectRainbow ? now + GAME_CONSTANTS.AUTO_COLLECT_DURATION : prev.autoCollectEndTime,
+            showAutoCollectMessage: perfectRainbow,
+            autoCollectMessageEndTime: perfectRainbow ? now + 1500 : prev.autoCollectMessageEndTime,
           }));
         }
 
@@ -308,16 +392,10 @@ export default function RainbowCatcher() {
     ],
   );
 
-  const handleDropMiss = useCallback(
-    (drop: ColorDrop) => {
-      // Only reset perfect rainbow if missing the target color
-      if (drop.type === 'normal' && drop.colorIndex === gameState.nextColorIndex) {
-        createRainbowLostEffect(drop.x, drop.y);
-        resetPerfectRainbow(true);
-      }
-    },
-    [gameState.nextColorIndex, resetPerfectRainbow, createRainbowLostEffect],
-  );
+  const handleDropMiss = useCallback((drop: ColorDrop) => {
+    // Only reset perfect rainbow if missing the target color - REMOVED
+    // Now only bombs reset the perfect rainbow progress
+  }, []);
 
   const startGame = useCallback(() => {
     const now = Date.now();
@@ -332,12 +410,23 @@ export default function RainbowCatcher() {
       isAutoCollecting: false,
       autoCollectEndTime: 0,
       cloudSpeedBoostEndTime: 0,
+      cloudSlowEndTime: 0, // New
       isRainShower: false,
       rainShowerEndTime: 0,
       nextRainShowerTime: now + GAME_CONSTANTS.RAIN_SHOWER_INTERVAL,
       perfectRainbowProgress: 0,
       showPerfectRainbowLost: false,
       perfectRainbowLostTime: 0,
+      isPointerLocked: false,
+      lightningFlash: false,
+      nextLightningTime: now + 2000,
+      showSpeedBoostMessage: false,
+      speedBoostMessageEndTime: 0,
+      showAutoCollectMessage: false,
+      autoCollectMessageEndTime: 0,
+      showSlowMessage: false, // New
+      slowMessageEndTime: 0, // New
+      timeOfDay: 'day', // New
     });
     clearDrops();
     clearParticles();
@@ -362,6 +451,11 @@ export default function RainbowCatcher() {
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
     }
+
+    // Release pointer lock if active
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
   }, []);
 
   // Game loop
@@ -382,30 +476,86 @@ export default function RainbowCatcher() {
     };
   }, [gameState.state, updateGame]);
 
-  // Mouse controls only
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  // Mouse controls and pointer lock
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
+      if (gameState.isPointerLocked) {
+        // Use movement for locked pointer
+        mouseXRef.current = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, cloudRef.current.x + e.movementX));
+      } else {
+        // Use absolute position for unlocked pointer
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-    const rect = canvas.getBoundingClientRect();
-    mouseXRef.current = e.clientX - rect.left;
-  }, []);
+        const rect = canvas.getBoundingClientRect();
+        mouseXRef.current = e.clientX - rect.left;
+      }
+    },
+    [gameState.isPointerLocked],
+  );
+
+  const handleCanvasClick = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || gameState.state !== 'playing') return;
+
+    // Request pointer lock
+    if (!gameState.isPointerLocked) {
+      canvas.requestPointerLock();
+    }
+  }, [gameState.state, gameState.isPointerLocked]);
+
+  // Handle pointer lock changes
+  useEffect(() => {
+    const handlePointerLockChange = () => {
+      setGameState((prev) => ({
+        ...prev,
+        isPointerLocked: document.pointerLockElement === canvasRef.current,
+      }));
+    };
+
+    const handleMouseMoveGlobal = (e: MouseEvent) => {
+      if (document.pointerLockElement === canvasRef.current) {
+        handleMouseMove(e);
+      }
+    };
+
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    document.addEventListener('mousemove', handleMouseMoveGlobal);
+
+    return () => {
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      document.removeEventListener('mousemove', handleMouseMoveGlobal);
+    };
+  }, [handleMouseMove]);
 
   const handleMouseLeave = useCallback(() => {
-    mouseXRef.current = 0;
-  }, []);
+    if (!gameState.isPointerLocked) {
+      mouseXRef.current = 0;
+    }
+  }, [gameState.isPointerLocked]);
+
+  // Initialize weather effects and stars
+  useEffect(() => {
+    initBackgroundClouds();
+    initWeatherElements();
+    initStars();
+  }, [initBackgroundClouds, initWeatherElements, initStars]);
 
   useEffect(() => {
     loadHighScore();
   }, [loadHighScore]);
 
-  // Dynamic background based on game weather
-  const backgroundClass = gameState.isRainShower
-    ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800'
-    : 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500';
+  // Update background class to support day/night cycle
+  const getBackgroundClass = () => {
+    if (gameState.timeOfDay === 'night') {
+      return gameState.isRainShower ? 'bg-gradient-to-br from-gray-900 via-black to-gray-800' : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-black';
+    } else {
+      return gameState.isRainShower ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' : 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500';
+    }
+  };
 
   return (
-    <div className={`min-h-screen ${backgroundClass} flex flex-col items-center justify-center p-4 transition-all duration-1000`}>
+    <div className={`min-h-screen ${getBackgroundClass()} flex flex-col items-center justify-center p-4 transition-all duration-1000`}>
       <div className="text-center mb-6">
         <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">🌈 Rainbow Catcher</h1>
         <p className="text-white/90 text-xl">Control the cloud to catch falling rainbow colors!</p>
@@ -426,8 +576,9 @@ export default function RainbowCatcher() {
           width={GAME_CONSTANTS.CANVAS_WIDTH}
           height={GAME_CONSTANTS.CANVAS_HEIGHT}
           className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-inner"
-          onMouseMove={handleMouseMove}
+          onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onClick={handleCanvasClick}
         />
 
         <GameUI
@@ -442,8 +593,8 @@ export default function RainbowCatcher() {
 
       <div className="mt-4 text-center text-white/90 text-sm bg-black/20 rounded-lg p-3">
         <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
-        <p>⚡ Golden = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life</p>
-        <p className="text-xs mt-2">🖱️ Use mouse to control the cloud</p>
+        <p>⚡ Golden = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Lose Life</p>
+        <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock)</p>
       </div>
 
       {/* Author Section */}

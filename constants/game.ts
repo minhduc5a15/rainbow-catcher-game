@@ -5,6 +5,10 @@ export const GAME_CONSTANTS = {
   RAIN_SHOWER_DURATION: 5000,
   RAIN_SHOWER_INTERVAL: 30000,
   DAMAGE_FLASH_DURATION: 30,
+  LIGHTNING_FLASH_DURATION: 150,
+  LIGHTNING_INTERVAL_MIN: 3000,
+  LIGHTNING_INTERVAL_MAX: 8000,
+  HAIL_SLOW_DURATION: 4000, // New: Hail slow effect duration
 
   // Scoring constants
   NORMAL_DROP_POINTS: 10,
@@ -17,13 +21,16 @@ export const GAME_CONSTANTS = {
   HEARTS_PER_PERFECT_RAINBOWS: 3,
   CLOUD_BASE_SPEED: 7,
   CLOUD_SPEED_BOOST_MULTIPLIER: 2,
+  CLOUD_SLOW_MULTIPLIER: 0.5, // New: Hail slow effect
   MOUSE_RESPONSIVENESS: 0.15,
+  MOUSE_RESPONSIVENESS_LOCKED: 0.8, // New: Different responsiveness for locked cursor
 
   // Drop spawn rates (percentages)
-  RAINBOW_DROP_CHANCE: 0.015, // 1.5% (reduced from 2%)
-  GOLDEN_DROP_CHANCE: 0.08, // 6.5% (0.08 - 0.015)
-  BLACK_DROP_CHANCE: 0.18, // 10% (0.18 - 0.08, increased from 7%)
+  RAINBOW_DROP_CHANCE: 0.01, // 1% (reduced from 1.5%)
+  GOLDEN_DROP_CHANCE: 0.08, // 7% (0.08 - 0.01)
+  BLACK_DROP_CHANCE: 0.2, // 12% (0.20 - 0.08, increased from 10%)
   HEART_DROP_CHANCE: 0.01, // 1%
+  HAIL_DROP_CHANCE: 0.25, // 5% (0.25 - 0.20)
 
   // Visual effects
   PARTICLE_COUNT_NORMAL: 20,
@@ -59,4 +66,13 @@ export const GAME_CONSTANTS = {
   RAINBOW_CENTER_Y: 80,
   RAINBOW_BASE_RADIUS: 140,
   RAINBOW_SEGMENT_WIDTH: 12,
+
+  // Weather effects
+  BACKGROUND_CLOUD_COUNT: 8,
+  WIND_COUNT: 5,
+  BIRD_COUNT: 3,
+
+  // Day/Night cycle
+  PERFECT_RAINBOWS_FOR_NIGHT: 5, // New: Perfect rainbows needed to change time
+  STAR_COUNT: 30, // New: Number of stars in night sky
 };
