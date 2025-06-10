@@ -242,6 +242,33 @@ export default function GameRules() {
           </CardContent>
         </Card>
 
+        {/* Global Leaderboard */}
+        <Card className="mt-6 bg-white/90 backdrop-blur-sm border-2 border-yellow-300">
+          <CardHeader className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-t-lg">
+            <CardTitle className="text-2xl">🌍 Global Leaderboard</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid gap-3 md:grid-cols-2">
+              <p className="flex items-center gap-2">
+                <span className="text-xl">🏆</span>
+                <span>Compete with players worldwide</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">⚡</span>
+                <span>Real-time score updates</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">📅</span>
+                <span>See when records were set</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">🎯</span>
+                <span>Aim for the global high score!</span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="text-center mt-8">
           <Link href="/">
             <Button
