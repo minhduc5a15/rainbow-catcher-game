@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
-import type { Particle } from '../types/game';
-import { GAME_CONSTANTS } from '../constants/game';
+import { useCallback, useRef } from 'react';
+import type { Particle } from '@/types/game';
+import { GAME_CONSTANTS } from '@/constants/game';
 
 export function useParticleSystem() {
   const particlesRef = useRef<Particle[]>([]);
@@ -86,8 +86,7 @@ export function useParticleSystem() {
       }
 
       // Draw particle with fading effect
-      const alpha = p.life / p.maxLife;
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = p.life / p.maxLife;
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);

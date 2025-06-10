@@ -2,13 +2,13 @@ export const GAME_CONSTANTS = {
   // Timing constants (in milliseconds)
   SPEED_BOOST_DURATION: 5000,
   AUTO_COLLECT_DURATION: 3000,
-  RAIN_SHOWER_DURATION: 5000,
+  RAIN_SHOWER_DURATION: 8000,
   RAIN_SHOWER_INTERVAL: 30000,
   DAMAGE_FLASH_DURATION: 30,
   LIGHTNING_FLASH_DURATION: 150,
   LIGHTNING_INTERVAL_MIN: 3000,
   LIGHTNING_INTERVAL_MAX: 8000,
-  HAIL_SLOW_DURATION: 4000, // New: Hail slow effect duration
+  FREEZE_DURATION: 3000,
 
   // Scoring constants
   NORMAL_DROP_POINTS: 10,
@@ -18,25 +18,26 @@ export const GAME_CONSTANTS = {
 
   // Game mechanics
   MAX_LIVES: 3,
-  HEARTS_PER_PERFECT_RAINBOWS: 3,
   CLOUD_BASE_SPEED: 7,
   CLOUD_SPEED_BOOST_MULTIPLIER: 2,
-  CLOUD_SLOW_MULTIPLIER: 0.5, // New: Hail slow effect
   MOUSE_RESPONSIVENESS: 0.15,
-  MOUSE_RESPONSIVENESS_LOCKED: 0.8, // New: Different responsiveness for locked cursor
+  MOUSE_RESPONSIVENESS_LOCKED: 0.8,
 
   // Drop spawn rates (percentages)
-  RAINBOW_DROP_CHANCE: 0.01, // 1% (reduced from 1.5%)
-  GOLDEN_DROP_CHANCE: 0.08, // 7% (0.08 - 0.01)
-  BLACK_DROP_CHANCE: 0.2, // 12% (0.20 - 0.08, increased from 10%)
-  HEART_DROP_CHANCE: 0.01, // 1%
-  HAIL_DROP_CHANCE: 0.25, // 5% (0.25 - 0.20)
+  RAINBOW_DROP_CHANCE: 0.01,
+  HEART_DROP_CHANCE: 0.01,
+
+  LIGHTNING_DROP_CHANCE: 0.2,
+  HAIL_DROP_CHANCE: 0.2,
+
+  BOMB_DROP_CHANCE: 0.45,
+  ROCKET_DROP_CHANCE: 0.45,
 
   // Visual effects
-  PARTICLE_COUNT_NORMAL: 20,
-  PARTICLE_COUNT_PERFECT: 50,
-  PARTICLE_LIFETIME: 80,
-  PERFECT_PARTICLE_LIFETIME: 120,
+  PARTICLE_COUNT_NORMAL: 10,
+  PARTICLE_COUNT_PERFECT: 30,
+  PARTICLE_LIFETIME: 50,
+  PERFECT_PARTICLE_LIFETIME: 60,
 
   // Canvas dimensions
   CANVAS_WIDTH: 800,
@@ -72,7 +73,7 @@ export const GAME_CONSTANTS = {
   WIND_COUNT: 5,
   BIRD_COUNT: 3,
 
-  // Day/Night cycle
-  PERFECT_RAINBOWS_FOR_NIGHT: 5, // New: Perfect rainbows needed to change time
-  STAR_COUNT: 30, // New: Number of stars in night sky
+  // Scene cycle - Updated to only have day/night
+  PERFECT_RAINBOWS_FOR_SCENE_CHANGE: 5,
+  STAR_COUNT: 30,
 };

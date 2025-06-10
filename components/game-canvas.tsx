@@ -1,14 +1,21 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { Cloud, ColorDrop, GameState } from '../types/game';
-import { RAINBOW_COLORS } from '../types/game';
-import { GAME_CONSTANTS } from '../constants/game';
+import type { Cloud, ColorDrop, GameState } from '@/types/game';
+import { RAINBOW_COLORS } from '@/types/game';
+import { GAME_CONSTANTS } from '@/constants/game';
 
 export function useGameCanvas() {
   const drawCloud = useCallback((ctx: CanvasRenderingContext2D, cloud: Cloud, isDamaged = false) => {
-    // Add speed boost glow effect - FIXED
-    if (cloud.speedMultiplier > 1) {
+    // Add freeze effect
+    if (cloud.isFrozen) {
+      ctx.shadowColor = '#00FFFF';
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
+    // Add speed boost glow effect
+    else if (cloud.speedMultiplier > 1) {
       ctx.shadowColor = '#FFD700';
       ctx.shadowBlur = 25;
       ctx.shadowOffsetX = 0;
@@ -23,8 +30,17 @@ export function useGameCanvas() {
       ctx.shadowOffsetY = 0;
     }
 
-    // Enhanced cloud drawing with more realistic shape - NO STROKE
-    ctx.fillStyle = isDamaged ? '#FFB3B3' : cloud.speedMultiplier > 1 ? '#FFFACD' : '#FFFFFF';
+    // Enhanced cloud drawing with freeze effect
+    let cloudColor = '#FFFFFF';
+    if (isDamaged) {
+      cloudColor = '#FFB3B3';
+    } else if (cloud.isFrozen) {
+      cloudColor = '#B0E0E6'; // Light blue for frozen
+    } else if (cloud.speedMultiplier > 1) {
+      cloudColor = '#FFFACD';
+    }
+
+    ctx.fillStyle = cloudColor;
 
     // Main cloud body with multiple overlapping circles for fluffy effect
     ctx.beginPath();
@@ -46,11 +62,41 @@ export function useGameCanvas() {
     ctx.fill();
 
     // Add cloud highlights for 3D effect
-    ctx.fillStyle = isDamaged ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.6)';
+    ctx.fillStyle = isDamaged ? 'rgba(255, 255, 255, 0.4)' : cloud.isFrozen ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.6)';
     ctx.beginPath();
     ctx.arc(cloud.x - 8, cloud.y - 8, 8, 0, Math.PI * 2);
     ctx.arc(cloud.x + 12, cloud.y - 12, 6, 0, Math.PI * 2);
     ctx.fill();
+
+    // Add freeze crystals effect
+    if (cloud.isFrozen) {
+      ctx.strokeStyle = '#87CEEB';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.8;
+
+      // Draw ice crystals around the cloud
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3;
+        const x1 = cloud.x + Math.cos(angle) * 35;
+        const y1 = cloud.y + Math.sin(angle) * 35;
+        const x2 = cloud.x + Math.cos(angle) * 45;
+        const y2 = cloud.y + Math.sin(angle) * 45;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Cross lines
+        ctx.beginPath();
+        ctx.moveTo(x1 - 3, y1 - 3);
+        ctx.lineTo(x1 + 3, y1 + 3);
+        ctx.moveTo(x1 + 3, y1 - 3);
+        ctx.lineTo(x1 - 3, y1 + 3);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
 
     // Add cute cloud face
     if (!isDamaged) {
@@ -61,12 +107,19 @@ export function useGameCanvas() {
       ctx.arc(cloud.x + 8, cloud.y - 5, 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Smile
-      ctx.strokeStyle = '#333333';
+      // Mouth - different for frozen state
+      ctx.strokeStyle = cloud.isFrozen ? '#0066CC' : '#333333';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cloud.x, cloud.y + 2, 8, 0, Math.PI);
-      ctx.stroke();
+      if (cloud.isFrozen) {
+        // Surprised/frozen expression
+        ctx.arc(cloud.x, cloud.y + 2, 4, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        // Normal smile
+        ctx.arc(cloud.x, cloud.y + 2, 8, 0, Math.PI);
+        ctx.stroke();
+      }
     } else {
       // Hurt expression
       ctx.fillStyle = '#FF0000';
@@ -92,7 +145,7 @@ export function useGameCanvas() {
   const drawColorDrop = useCallback((ctx: CanvasRenderingContext2D, drop: ColorDrop, isTargetColor = false) => {
     // Add pulsing effect for target color
     if (isTargetColor && drop.type === 'normal') {
-      const pulseSize = 2 + Math.sin(Date.now() * 0.01) * 1;
+      const pulseSize = 2 + Math.sin(Date.now() * 0.01);
       ctx.shadowColor = drop.color;
       ctx.shadowBlur = 15;
 
@@ -106,7 +159,7 @@ export function useGameCanvas() {
       ctx.globalAlpha = 1;
     }
 
-    if (drop.type === 'golden') {
+    if (drop.type === 'lightning') {
       // Enhanced golden drop with sparkle animation
       const sparkleOffset = Math.sin(Date.now() * 0.02) * 2;
       ctx.fillStyle = drop.color;
@@ -129,7 +182,7 @@ export function useGameCanvas() {
       ctx.rotate(sparkleOffset * 0.1);
       ctx.fillText('⚡', 0, 0);
       ctx.restore();
-    } else if (drop.type === 'black') {
+    } else if (drop.type === 'bomb') {
       // Enhanced black drop with danger pulsing
       const dangerPulse = 1 + Math.sin(Date.now() * 0.02) * 0.3;
       ctx.fillStyle = drop.color;
@@ -198,7 +251,7 @@ export function useGameCanvas() {
       ctx.shadowBlur = 15;
 
       // Main hail body with cyan color for better contrast
-      ctx.fillStyle = '#00BFFF'; // Deep sky blue instead of light blue
+      ctx.fillStyle = '#00BFFF';
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 3;
 
@@ -477,9 +530,9 @@ export function useGameCanvas() {
       ctx.fillText('Auto Collect', barX, barY - 5);
     }
 
-    // Draw hail slow timer if active
-    if (gameState.cloudSlowEndTime > now) {
-      const timeLeft = (gameState.cloudSlowEndTime - now) / GAME_CONSTANTS.HAIL_SLOW_DURATION;
+    // Draw freeze timer if active
+    if (gameState.cloudFreezeEndTime > now) {
+      const timeLeft = (gameState.cloudFreezeEndTime - now) / GAME_CONSTANTS.FREEZE_DURATION;
       const barWidth = 150;
       const barHeight = 10;
       const barX = 20;
@@ -502,7 +555,7 @@ export function useGameCanvas() {
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Slowed Down', barX, barY - 5);
+      ctx.fillText('Frozen', barX, barY - 5);
     }
   }, []);
 
@@ -546,8 +599,8 @@ export function useGameCanvas() {
       ctx.restore();
     }
 
-    // Draw slow message
-    if (gameState.showSlowMessage) {
+    // Draw freeze message
+    if (gameState.showFreezeMessage) {
       ctx.save();
       ctx.fillStyle = '#00BFFF';
       ctx.font = 'bold 24px Arial';
@@ -561,8 +614,8 @@ export function useGameCanvas() {
       ctx.scale(scale, scale);
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 2;
-      ctx.strokeText('❄️ SLOWED DOWN! ❄️', 0, 0);
-      ctx.fillText('❄️ SLOWED DOWN! ❄️', 0, 0);
+      ctx.strokeText('❄️ FROZEN! ❄️', 0, 0);
+      ctx.fillText('❄️ FROZEN! ❄️', 0, 0);
       ctx.restore();
     }
   }, []);
@@ -571,7 +624,7 @@ export function useGameCanvas() {
     (
       ctx: CanvasRenderingContext2D,
       gameState: GameState,
-      drawWeatherEffects?: (ctx: CanvasRenderingContext2D) => void,
+      drawWeatherEffects?: (ctx: CanvasRenderingContext2D, timeOfDay?: 'day' | 'night') => void,
       drawStars?: (ctx: CanvasRenderingContext2D) => void,
       isLightningFlash?: boolean,
     ) => {
@@ -611,14 +664,14 @@ export function useGameCanvas() {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
 
-      // Draw stars for night time
+      // Draw stars for nighttime
       if (gameState.timeOfDay === 'night' && !gameState.isRainShower && drawStars) {
         drawStars(ctx);
       }
 
       // Draw weather effects
       if (drawWeatherEffects) {
-        drawWeatherEffects(ctx);
+        drawWeatherEffects(ctx, gameState.timeOfDay);
       }
 
       // Enhanced rainbow arc with glow
@@ -666,7 +719,7 @@ export function useGameCanvas() {
       colorDrops: ColorDrop[],
       updateAndDrawParticles: (ctx: CanvasRenderingContext2D) => void,
       updateAndDrawDamageTexts: (ctx: CanvasRenderingContext2D) => void,
-      drawWeatherEffects: (ctx: CanvasRenderingContext2D) => void,
+      drawWeatherEffects: (ctx: CanvasRenderingContext2D, timeOfDay?: 'day' | 'night') => void,
       drawStars: (ctx: CanvasRenderingContext2D) => void,
       isLightningFlash: boolean,
       isDamaged = false,

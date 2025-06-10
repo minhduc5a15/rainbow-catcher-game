@@ -7,13 +7,14 @@ import { RAINBOW_COLORS } from '../types/game';
 interface GameUIProps {
   gameState: GameState;
   highScore: number;
+  newGlobalRecord: boolean;
   onStartGame: () => void;
   onResetGame: () => void;
   showGameOverDialog: boolean;
   onCloseGameOverDialog: () => void;
 }
 
-export function GameUI({ gameState, highScore, onStartGame, onResetGame, showGameOverDialog, onCloseGameOverDialog }: GameUIProps) {
+export function GameUI({ gameState, highScore, newGlobalRecord, onStartGame, onResetGame, showGameOverDialog, onCloseGameOverDialog }: GameUIProps) {
   return (
     <>
       <div className="mt-4 text-center">
@@ -27,8 +28,10 @@ export function GameUI({ gameState, highScore, onStartGame, onResetGame, showGam
               <p>🌈 Catch colors in rainbow order for bonus points!</p>
               <p>⚡ Golden drops boost cloud speed</p>
               <p>💣 Avoid black drops (lose life)</p>
+              <p>🚀 Avoid rockets (lose life)</p>
               <p>🌈 Rainbow drops auto-collect all colors</p>
               <p>❤️ Heart drops give extra lives</p>
+              <p>❄️ Hail drops freeze the cloud</p>
               <p>💀 Game over when you lose all 3 lives</p>
             </div>
           </div>
@@ -38,6 +41,7 @@ export function GameUI({ gameState, highScore, onStartGame, onResetGame, showGam
           <div className="text-sm text-gray-600 space-y-1">
             <p>Use mouse to move the cloud</p>
             {gameState.isRainShower && <p className="text-blue-600 font-bold animate-pulse">🌧️ RAIN SHOWER - DOUBLE POINTS!</p>}
+            {gameState.timeOfDay === 'night' && <p className="text-indigo-600 font-bold">🌙 Night Time - Stars are shining!</p>}
           </div>
         )}
 
@@ -71,9 +75,10 @@ export function GameUI({ gameState, highScore, onStartGame, onResetGame, showGam
                 Perfect Rainbows: <span className="text-purple-600">{gameState.perfectRainbowCount}</span> 🌈
               </p>
               <p className="text-lg">
-                Current High Score: <span className="text-orange-600">{highScore}</span> 🏆
+                Personal Best: <span className="text-orange-600">{highScore}</span> 🏆
               </p>
-              {gameState.score > highScore && <p className="text-green-600 font-bold text-xl animate-bounce">🎉 NEW RECORD! 🎉</p>}
+              {gameState.score > highScore && <p className="text-green-600 font-bold text-xl animate-bounce">🎉 NEW PERSONAL RECORD! 🎉</p>}
+              {newGlobalRecord && <p className="text-yellow-600 font-bold text-xl animate-bounce">🌍 NEW GLOBAL RECORD! 🌍</p>}
             </div>
 
             <div className="flex gap-2 justify-center">
@@ -127,6 +132,11 @@ export function GameStats({ gameState }: GameStatsProps) {
       <div className="text-sm bg-purple-100 px-3 py-1 rounded-full">
         Perfect: <span className="text-purple-600 font-bold">{gameState.perfectRainbowCount}</span> 🌈
       </div>
+      {gameState.timeOfDay === 'night' && (
+        <div className="text-sm bg-indigo-100 px-3 py-1 rounded-full">
+          <span className="text-indigo-600 font-bold">🌙 Night</span>
+        </div>
+      )}
     </div>
   );
 }

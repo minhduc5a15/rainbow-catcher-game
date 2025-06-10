@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { GAME_CONSTANTS } from '../constants/game';
 import type { BackgroundCloud } from '../types/game';
 
@@ -182,7 +182,7 @@ export function useWeatherEffects() {
   }, []);
 
   const drawWeatherEffects = useCallback(
-    (ctx: CanvasRenderingContext2D) => {
+    (ctx: CanvasRenderingContext2D, timeOfDay: 'day' | 'night' = 'day') => {
       // Draw background clouds first
       drawBackgroundClouds(ctx);
 
@@ -218,8 +218,8 @@ export function useWeatherEffects() {
 
           // Bird wings
           ctx.beginPath();
-          ctx.ellipse(element.x - 2, element.y + flapOffset, 4 * element.size, 1 * element.size, -0.3, 0, Math.PI * 2);
-          ctx.ellipse(element.x + 2, element.y - flapOffset, 4 * element.size, 1 * element.size, 0.3, 0, Math.PI * 2);
+          ctx.ellipse(element.x - 2, element.y + flapOffset, 4 * element.size, element.size, -0.3, 0, Math.PI * 2);
+          ctx.ellipse(element.x + 2, element.y - flapOffset, 4 * element.size, element.size, 0.3, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -232,13 +232,6 @@ export function useWeatherEffects() {
   const isLightningFlash = useCallback(() => {
     return lightningFlashRef.current;
   }, []);
-
-  const clearWeatherEffects = useCallback(() => {
-    weatherElementsRef.current = [];
-    initBackgroundClouds();
-    initWeatherElements();
-    lastLightningTimeRef.current = Date.now() + 2000; // First lightning after 2 seconds
-  }, [initBackgroundClouds, initWeatherElements]);
 
   const initStars = useCallback(() => {
     const stars: Star[] = [];
@@ -254,6 +247,14 @@ export function useWeatherEffects() {
     starSystemRef.current = stars;
   }, []);
 
+  const clearWeatherEffects = useCallback(() => {
+    weatherElementsRef.current = [];
+    initBackgroundClouds();
+    initWeatherElements();
+    initStars();
+    lastLightningTimeRef.current = Date.now() + 2000;
+  }, [initBackgroundClouds, initWeatherElements, initStars]);
+
   const updateStars = useCallback(() => {
     starSystemRef.current.forEach((star) => {
       star.twinkle += 0.05;
@@ -264,8 +265,7 @@ export function useWeatherEffects() {
     const stars = starSystemRef.current;
 
     for (const star of stars) {
-      const alpha = star.brightness * (0.7 + 0.3 * Math.sin(star.twinkle));
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = star.brightness * (0.7 + 0.3 * Math.sin(star.twinkle));
       ctx.fillStyle = '#FFD700';
 
       // Draw star shape

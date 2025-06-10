@@ -4,8 +4,13 @@ export interface ColorDrop {
   color: string;
   colorIndex: number;
   speed: number;
-  type: 'normal' | 'golden' | 'black' | 'rainbow' | 'heart' | 'hail';
+  type: 'normal' | 'lightning' | 'bomb' | 'rainbow' | 'heart' | 'hail' | 'rocket';
   id: string;
+  // Rocket-specific properties
+  angle?: number;
+  amplitude?: number;
+  frequency?: number;
+  startY?: number;
 }
 
 export interface Cloud {
@@ -14,6 +19,7 @@ export interface Cloud {
   width: number;
   height: number;
   speedMultiplier: number;
+  isFrozen: boolean;
 }
 
 export interface Particle {
@@ -39,11 +45,11 @@ export interface GameState {
   isAutoCollecting: boolean;
   autoCollectEndTime: number;
   cloudSpeedBoostEndTime: number;
-  cloudSlowEndTime: number; // New: Hail slow effect end time
+  cloudFreezeEndTime: number;
   isRainShower: boolean;
   rainShowerEndTime: number;
   nextRainShowerTime: number;
-  perfectRainbowProgress: number; // Track progress within current rainbow
+  perfectRainbowProgress: number;
   showPerfectRainbowLost: boolean;
   perfectRainbowLostTime: number;
   isPointerLocked: boolean;
@@ -53,9 +59,9 @@ export interface GameState {
   speedBoostMessageEndTime: number;
   showAutoCollectMessage: boolean;
   autoCollectMessageEndTime: number;
-  showSlowMessage: boolean; // New: Hail slow message
-  slowMessageEndTime: number; // New: Hail slow message end time
-  timeOfDay: 'day' | 'night'; // New: Day/night cycle
+  showFreezeMessage: boolean;
+  freezeMessageEndTime: number;
+  timeOfDay: 'day' | 'night'; // Removed snow
 }
 
 export interface PowerUp {
