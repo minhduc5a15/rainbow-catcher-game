@@ -35,7 +35,7 @@ export default function GameRules() {
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">❤️</span>
-                  <span>You have 3 lives - lose them by hitting bombs or hail!</span>
+                  <span>You have 3 lives - lose them by hitting bombs or rockets!</span>
                 </p>
               </div>
             </CardContent>
@@ -61,9 +61,15 @@ export default function GameRules() {
                   </span>
                 </p>
                 <p className="flex items-center gap-2">
+                  <span className="text-2xl">🚀</span>
+                  <span>
+                    <strong>Rocket:</strong> Complex movement, lose 1 life & reset rainbow progress
+                  </span>
+                </p>
+                <p className="flex items-center gap-2">
                   <span className="text-2xl">❄️</span>
                   <span>
-                    <strong>Hail Drop:</strong> Slows down cloud movement for 4 seconds
+                    <strong>Hail Drop:</strong> Freezes cloud movement for 3 seconds
                   </span>
                 </p>
                 <p className="flex items-center gap-2">
@@ -107,11 +113,11 @@ export default function GameRules() {
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">💔</span>
-                  <span>Progress resets if you hit bomb or hail</span>
+                  <span>Progress resets if you hit bomb or rocket</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-2xl">❤️</span>
-                  <span>Every 3 perfect rainbows = 1 heart drop</span>
+                  <span className="text-2xl">🎯</span>
+                  <span>Missing target colors doesn't affect progress</span>
                 </p>
               </div>
             </CardContent>
@@ -126,7 +132,7 @@ export default function GameRules() {
               <div className="space-y-3">
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">⏰</span>
-                  <span>Occurs every 30 seconds for 5 seconds</span>
+                  <span>Occurs every 30 seconds for 8 seconds</span>
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">⚡</span>
@@ -158,7 +164,7 @@ export default function GameRules() {
             <div className="grid gap-3 md:grid-cols-2">
               <p className="flex items-center gap-2">
                 <span className="text-xl">💣</span>
-                <span>Hit 3 bombs and lose all lives</span>
+                <span>Hit 3 bombs/rockets and lose all lives</span>
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">❤️</span>
@@ -166,15 +172,11 @@ export default function GameRules() {
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">🔄</span>
-                <span>Rainbow progress resets on bomb/hail hits</span>
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-xl">🎯</span>
-                <span>Missing target colors doesn't affect progress</span>
+                <span>Rainbow progress resets on bomb/rocket hits</span>
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">❄️</span>
-                <span>Hail slows you down but doesn't damage</span>
+                <span>Hail freezes you but doesn't damage</span>
               </p>
             </div>
           </CardContent>
@@ -205,7 +207,7 @@ export default function GameRules() {
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">💣</span>
-                <span>Avoid black bombs and hail at all costs</span>
+                <span>Avoid bombs, rockets, and hail</span>
               </p>
               <p className="flex items-center gap-2">
                 <span className="text-xl">🏆</span>
