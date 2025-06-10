@@ -240,6 +240,45 @@ export function useGameCanvas() {
       ctx.lineWidth = 1;
       ctx.strokeText('❄️', drop.x, drop.y + 4);
       ctx.fillText('❄️', drop.x, drop.y + 4);
+    } else if (drop.type === 'rocket') {
+      // Rocket drop with flame trail and rotation
+      const time = Date.now() * 0.01;
+      const rocketPulse = 1 + Math.sin(time * 2) * 0.1;
+
+      // Rocket body
+      ctx.fillStyle = '#FF4500';
+      ctx.strokeStyle = '#FF0000';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#FF6600';
+      ctx.shadowBlur = 15;
+
+      ctx.beginPath();
+      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * rocketPulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Flame trail effect
+      ctx.fillStyle = `rgba(255, ${100 + Math.sin(time * 5) * 50}, 0, 0.7)`;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.arc(drop.x - i * 3, drop.y + i * 5, (5 - i) * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Rocket emoji with rotation
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.save();
+      ctx.translate(drop.x, drop.y + 4);
+      if (drop.angle !== undefined) {
+        ctx.rotate(drop.angle * 0.1);
+      }
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.strokeText('🚀', 0, 0);
+      ctx.fillText('🚀', 0, 0);
+      ctx.restore();
     } else {
       // Enhanced normal drop
       ctx.fillStyle = drop.color;
