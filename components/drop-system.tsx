@@ -86,7 +86,7 @@ export function useDropSystem() {
     // Add rocket-specific properties with cloud tracking
     if (dropType === 'rocket') {
       drop.angle = Math.random() * Math.PI * 2;
-      drop.amplitude = 30 + Math.random() * 50; // Reduced amplitude for better tracking
+      drop.amplitude = 30 + Math.random() * 50;
       drop.frequency = 0.03 + Math.random() * 0.02;
       drop.startY = drop.y;
       // Start rocket closer to cloud X position for better tracking
@@ -99,7 +99,7 @@ export function useDropSystem() {
   const getRandomDropType = useCallback((): Drop['type'] => {
     const rand = Math.random();
 
-    // Check for special drops first (total ~21.2%)
+    // Check for special drops first (total ~24.8%)
     let cumulativeProbability = 0;
 
     // Ultra rare drops
@@ -152,14 +152,40 @@ export function useDropSystem() {
       return 'rocket';
     }
 
-    // Everything else is normal rainbow drops (~78.8%)
+    // Everything else is normal rainbow drops (~75.2%)
     return 'normal';
   }, []);
 
-  const spawnDrop = useCallback(
+  const spawnMultipleDrops = useCallback(
     (gameSpeed: number, isRainShower = false, cloudX = 400, focusMode = false) => {
-      const newDrop = createDrop(gameSpeed, isRainShower, cloudX, focusMode);
-      dropsRef.current.push(newDrop);
+      // Determine how many drops to spawn - more conservative
+      let dropCount = GAME_CONSTANTS.DROPS_PER_SPAWN_NORMAL;
+
+      if (focusMode && isRainShower) {
+        dropCount = GAME_CONSTANTS.DROPS_PER_SPAWN_FOCUS_RAIN;
+      } else if (focusMode) {
+        dropCount = GAME_CONSTANTS.DROPS_PER_SPAWN_FOCUS;
+      } else if (isRainShower) {
+        dropCount = GAME_CONSTANTS.DROPS_PER_SPAWN_RAIN;
+      }
+
+      // Spawn drops with better spacing
+      for (let i = 0; i < dropCount; i++) {
+        const newDrop = createDrop(gameSpeed, isRainShower, cloudX, focusMode);
+
+        // Add horizontal spread for multiple drops
+        if (dropCount > 1) {
+          const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
+          const spreadRange = canvasWidth * 0.4; // 40% of canvas width for better spread
+          const spreadOffset = (i - (dropCount - 1) / 2) * (spreadRange / dropCount);
+          newDrop.x = Math.max(20, Math.min(canvasWidth - 20, newDrop.x + spreadOffset));
+
+          // Slight vertical offset to avoid perfect overlap
+          newDrop.y = -10 - i * 20; // Increased spacing
+        }
+
+        dropsRef.current.push(newDrop);
+      }
     },
     [createDrop],
   );
@@ -167,11 +193,22 @@ export function useDropSystem() {
   const updateDrops = useCallback(
     (gameSpeed: number, isRainShower = false, cloudX = 400, focusMode = false) => {
       const now = Date.now();
-      // Faster spawn rate for more drops
-      const spawnRate = isRainShower ? 150 : Math.max(300, 800 / gameSpeed);
+
+      // Determine spawn rate based on mode and weather
+      let spawnRate: number;
+
+      if (focusMode && isRainShower) {
+        spawnRate = GAME_CONSTANTS.DROP_SPAWN_RATE_FOCUS_RAIN;
+      } else if (focusMode) {
+        spawnRate = GAME_CONSTANTS.DROP_SPAWN_RATE_FOCUS;
+      } else if (isRainShower) {
+        spawnRate = GAME_CONSTANTS.DROP_SPAWN_RATE_RAIN;
+      } else {
+        spawnRate = Math.max(GAME_CONSTANTS.DROP_SPAWN_RATE_BASE, 500 / gameSpeed); // Slightly slower than before
+      }
 
       if (now - lastDropTimeRef.current > spawnRate) {
-        spawnDrop(gameSpeed, isRainShower, cloudX, focusMode);
+        spawnMultipleDrops(gameSpeed, isRainShower, cloudX, focusMode);
         lastDropTimeRef.current = now;
       }
 
@@ -220,7 +257,7 @@ export function useDropSystem() {
         }
       });
     },
-    [spawnDrop],
+    [spawnMultipleDrops],
   );
 
   const clearDrops = useCallback(() => {

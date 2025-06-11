@@ -25,27 +25,39 @@ export const GAME_CONSTANTS = {
   MOUSE_RESPONSIVENESS: 0.15,
   MOUSE_RESPONSIVENESS_LOCKED: 0.8,
 
-  // Drop spawn rates (percentages) - SPECIAL DROPS ONLY
-  RAINBOW_DROP_CHANCE: 0.003, // 0.3%
-  HEART_DROP_CHANCE: 0.003, // 0.3%
-  WATER_DROP_CHANCE: 0.01, // 1%
+  // Drop spawn rates (percentages) - SPECIAL DROPS ONLY - Balanced
+  RAINBOW_DROP_CHANCE: 0.004, // Slightly increased from original 0.003 (0.4%)
+  HEART_DROP_CHANCE: 0.004, // Slightly increased from original 0.003 (0.4%)
+  WATER_DROP_CHANCE: 0.012, // Slightly increased from original 0.01 (1.2%)
 
-  LIGHTNING_DROP_CHANCE: 0.04, // 4%
-  HAIL_DROP_CHANCE: 0.04, // 4%
-  REVERSE_DROP_CHANCE: 0.04, // 4%
-  DOUBLE_DROP_CHANCE: 0.03, // 3%
+  LIGHTNING_DROP_CHANCE: 0.05, // Slightly increased from original 0.04 (5%)
+  HAIL_DROP_CHANCE: 0.05, // Slightly increased from original 0.04 (5%)
+  REVERSE_DROP_CHANCE: 0.05, // Slightly increased from original 0.04 (5%)
+  DOUBLE_DROP_CHANCE: 0.035, // Slightly increased from original 0.03 (3.5%)
 
-  BOMB_DROP_CHANCE: 0.06, // 6%
-  ROCKET_DROP_CHANCE: 0.06, // 6%
+  BOMB_DROP_CHANCE: 0.07, // Slightly increased from original 0.06 (7%)
+  ROCKET_DROP_CHANCE: 0.07, // Slightly increased from original 0.06 (7%)
 
-  // Total special drops: ~21.2%, Normal drops: ~78.8%
+  // Total special drops: ~24.8%, Normal drops: ~75.2%
 
   // Drop speed multipliers
   BOMB_SPEED_MULTIPLIER: 1.8,
   REVERSE_SPEED_MULTIPLIER: 1.6,
   HAIL_SPEED_MULTIPLIER: 1.5,
-  ROCKET_SPEED_MULTIPLIER: 1.2, // Reduced from 1.4 to 1.2
+  ROCKET_SPEED_MULTIPLIER: 1.2,
   WATER_SPEED_MULTIPLIER: 1.2,
+
+  // Drop spawn timing - Moderate increase
+  DROP_SPAWN_RATE_BASE: 250, // Reduced from 300 but not as aggressive as 200
+  DROP_SPAWN_RATE_RAIN: 120, // Faster during rain but not too fast
+  DROP_SPAWN_RATE_FOCUS: 200, // Faster in focus mode
+  DROP_SPAWN_RATE_FOCUS_RAIN: 90, // Faster in focus mode during rain
+
+  // Multiple drops per spawn - More conservative
+  DROPS_PER_SPAWN_NORMAL: 1,
+  DROPS_PER_SPAWN_RAIN: 1, // Keep single drop during rain in normal mode
+  DROPS_PER_SPAWN_FOCUS: 2, // 2 drops in focus mode (larger screen)
+  DROPS_PER_SPAWN_FOCUS_RAIN: 2, // 2 drops in focus mode during rain
 
   // Visual effects
   PARTICLE_COUNT_NORMAL: 10,
