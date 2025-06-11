@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import type { Cloud, ColorDrop, GameState } from '@/types/game';
+import type { Cloud, Drop, GameState } from '@/types/game';
 import { useParticleSystem } from '@/components/particle-system';
 import { useDropSystem } from '@/components/drop-system';
 import { useGameCanvas } from '@/components/game-canvas';
@@ -81,7 +81,7 @@ export default function RainbowCatcher() {
     drawStars,
   } = useWeatherEffects();
 
-  const checkCollision = useCallback((cloud: Cloud, drop: ColorDrop): boolean => {
+  const checkCollision = useCallback((cloud: Cloud, drop: Drop): boolean => {
     const cloudCenterX = cloud.x;
     const cloudCenterY = cloud.y;
     const distance = Math.sqrt(Math.pow(drop.x - cloudCenterX, 2) + Math.pow(drop.y - cloudCenterY, 2));
@@ -323,7 +323,7 @@ export default function RainbowCatcher() {
   ]);
 
   const handleDropCatch = useCallback(
-    (drop: ColorDrop, now: number) => {
+    (drop: Drop, now: number) => {
       createCatchParticles(drop.x, drop.y, drop.color);
 
       if (drop.type === 'bomb' || drop.type === 'rocket') {

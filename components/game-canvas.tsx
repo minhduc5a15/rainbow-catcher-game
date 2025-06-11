@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { Cloud, ColorDrop, GameState } from '@/types/game';
+import type { Cloud, Drop, GameState } from '@/types/game';
 import { RAINBOW_COLORS } from '@/types/game';
 import { GAME_CONSTANTS } from '@/constants/game';
 
@@ -142,7 +142,7 @@ export function useGameCanvas() {
     ctx.shadowOffsetY = 0;
   }, []);
 
-  const drawColorDrop = useCallback((ctx: CanvasRenderingContext2D, drop: ColorDrop, isTargetColor = false) => {
+  const drawColorDrop = useCallback((ctx: CanvasRenderingContext2D, drop: Drop, isTargetColor = false) => {
     // Add pulsing effect for target color
     if (isTargetColor && drop.type === 'normal') {
       const pulseSize = 2 + Math.sin(Date.now() * 0.01);
@@ -716,7 +716,7 @@ export function useGameCanvas() {
       ctx: CanvasRenderingContext2D,
       gameState: GameState,
       cloud: Cloud,
-      colorDrops: ColorDrop[],
+      colorDrops: Drop[],
       updateAndDrawParticles: (ctx: CanvasRenderingContext2D) => void,
       updateAndDrawDamageTexts: (ctx: CanvasRenderingContext2D) => void,
       drawWeatherEffects: (ctx: CanvasRenderingContext2D, timeOfDay?: 'day' | 'night') => void,

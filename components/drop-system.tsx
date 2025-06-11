@@ -1,16 +1,16 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import type { ColorDrop } from '@/types/game';
+import type { Drop } from '@/types/game';
 import { RAINBOW_COLORS } from '@/types/game';
 import { GAME_CONSTANTS } from '@/constants/game';
 
 export function useDropSystem() {
-  const dropsRef = useRef<ColorDrop[]>([]);
+  const dropsRef = useRef<Drop[]>([]);
   const lastDropTimeRef = useRef(0);
   const dropIdCounter = useRef(0);
 
-  const createDrop = useCallback((gameSpeed: number, isRainShower = false): ColorDrop => {
+  const createDrop = useCallback((gameSpeed: number, isRainShower = false): Drop => {
     const dropType = getRandomDropType();
     let color: string;
     let colorIndex: number;
@@ -48,7 +48,7 @@ export function useDropSystem() {
 
     const speed = (GAME_CONSTANTS.DROP_BASE_SPEED + gameSpeed * 0.5) * (isRainShower ? GAME_CONSTANTS.RAIN_SPEED_MULTIPLIER : 1);
 
-    const drop: ColorDrop = {
+    const drop: Drop = {
       x: Math.random() * (GAME_CONSTANTS.CANVAS_WIDTH - 40) + 20,
       y: -10,
       color,
@@ -69,7 +69,7 @@ export function useDropSystem() {
     return drop;
   }, []);
 
-  const getRandomDropType = useCallback((): ColorDrop['type'] => {
+  const getRandomDropType = useCallback((): Drop['type'] => {
     const rand = Math.random();
 
     if (rand <= 0.01) {

@@ -1,4 +1,4 @@
-export interface ColorDrop {
+export interface Drop {
   x: number;
   y: number;
   color: string;
@@ -61,7 +61,7 @@ export interface GameState {
   autoCollectMessageEndTime: number;
   showFreezeMessage: boolean;
   freezeMessageEndTime: number;
-  timeOfDay: 'day' | 'night'; // Removed snow
+  timeOfDay: 'day' | 'night';
 }
 
 export interface PowerUp {
