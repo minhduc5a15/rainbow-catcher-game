@@ -117,106 +117,110 @@ export function useGameCanvas() {
     ctx.restore();
   }, []);
 
-  const drawRainbowProgressBar = useCallback((ctx: CanvasRenderingContext2D, nextColorIndex: number, perfectCount: number, showLostMessage = false) => {
-    const barWidth = GAME_CONSTANTS.PROGRESS_BAR_WIDTH;
-    const barHeight = GAME_CONSTANTS.PROGRESS_BAR_HEIGHT;
-    const barX = GAME_CONSTANTS.PROGRESS_BAR_X;
-    const barY = GAME_CONSTANTS.PROGRESS_BAR_Y;
+  const drawRainbowProgressBar = useCallback(
+    (ctx: CanvasRenderingContext2D, nextColorIndex: number, perfectCount: number, showLostMessage = false, focusMode = false) => {
+      // Use different dimensions based on focus mode
+      const barWidth = focusMode ? GAME_CONSTANTS.FOCUS_PROGRESS_BAR_WIDTH : GAME_CONSTANTS.PROGRESS_BAR_WIDTH;
+      const barHeight = GAME_CONSTANTS.PROGRESS_BAR_HEIGHT;
+      const barX = focusMode ? GAME_CONSTANTS.FOCUS_PROGRESS_BAR_X : GAME_CONSTANTS.PROGRESS_BAR_X;
+      const barY = GAME_CONSTANTS.PROGRESS_BAR_Y;
 
-    // Enhanced background with gradient and border
-    const bgGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
-    bgGradient.addColorStop(0, '#2a2a2a');
-    bgGradient.addColorStop(1, '#1a1a1a');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+      // Enhanced background with gradient and border
+      const bgGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+      bgGradient.addColorStop(0, '#2a2a2a');
+      bgGradient.addColorStop(1, '#1a1a1a');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
 
-    // Inner background
-    ctx.fillStyle = '#333333';
-    ctx.fillRect(barX, barY, barWidth, barHeight);
+      // Inner background
+      ctx.fillStyle = '#333333';
+      ctx.fillRect(barX, barY, barWidth, barHeight);
 
-    // Draw segments with enhanced effects
-    const segmentWidth = barWidth / 7;
-    for (let i = 0; i < 7; i++) {
-      const segmentX = barX + i * segmentWidth;
+      // Draw segments with enhanced effects
+      const segmentWidth = barWidth / 7;
+      for (let i = 0; i < 7; i++) {
+        const segmentX = barX + i * segmentWidth;
 
-      if (i < nextColorIndex) {
-        // Completed segments with glow
-        const gradient = ctx.createLinearGradient(segmentX, barY, segmentX, barY + barHeight);
-        gradient.addColorStop(0, RAINBOW_COLORS[i].color);
-        gradient.addColorStop(1, `${RAINBOW_COLORS[i].color}CC`);
+        if (i < nextColorIndex) {
+          // Completed segments with glow
+          const gradient = ctx.createLinearGradient(segmentX, barY, segmentX, barY + barHeight);
+          gradient.addColorStop(0, RAINBOW_COLORS[i].color);
+          gradient.addColorStop(1, `${RAINBOW_COLORS[i].color}CC`);
 
-        ctx.fillStyle = gradient;
-        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
+          ctx.fillStyle = gradient;
+          ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
 
-        // Add shine effect
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, 3);
-      } else if (i === nextColorIndex) {
-        // Current target segment with pulsing effect
-        const pulse = 0.7 + Math.sin(Date.now() * 0.008) * 0.3;
-        ctx.fillStyle = `${RAINBOW_COLORS[i].color}${Math.floor(pulse * 255)
-          .toString(16)
-          .padStart(2, '0')}`;
-        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
+          // Add shine effect
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, 3);
+        } else if (i === nextColorIndex) {
+          // Current target segment with pulsing effect
+          const pulse = 0.7 + Math.sin(Date.now() * 0.008) * 0.3;
+          ctx.fillStyle = `${RAINBOW_COLORS[i].color}${Math.floor(pulse * 255)
+            .toString(16)
+            .padStart(2, '0')}`;
+          ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
 
-        // Animated border
-        ctx.strokeStyle = RAINBOW_COLORS[i].color;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
-      } else {
-        // Incomplete segments
-        ctx.fillStyle = '#555555';
-        ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
+          // Animated border
+          ctx.strokeStyle = RAINBOW_COLORS[i].color;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
+        } else {
+          // Incomplete segments
+          ctx.fillStyle = '#555555';
+          ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
+        }
       }
-    }
 
-    // Enhanced border with gradient
-    const borderGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
-    borderGradient.addColorStop(0, '#666666');
-    borderGradient.addColorStop(1, '#333333');
-    ctx.strokeStyle = borderGradient;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(barX, barY, barWidth, barHeight);
+      // Enhanced border with gradient
+      const borderGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+      borderGradient.addColorStop(0, '#666666');
+      borderGradient.addColorStop(1, '#333333');
+      ctx.strokeStyle = borderGradient;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-    // Segment dividers
-    ctx.strokeStyle = '#222222';
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 7; i++) {
-      const dividerX = barX + i * segmentWidth;
-      ctx.beginPath();
-      ctx.moveTo(dividerX, barY);
-      ctx.lineTo(dividerX, barY + barHeight);
-      ctx.stroke();
-    }
+      // Segment dividers
+      ctx.strokeStyle = '#222222';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 7; i++) {
+        const dividerX = barX + i * segmentWidth;
+        ctx.beginPath();
+        ctx.moveTo(dividerX, barY);
+        ctx.lineTo(dividerX, barY + barHeight);
+        ctx.stroke();
+      }
 
-    // Enhanced label with better styling
-    const labelY = barY - 25;
-    const labelHeight = 20;
+      // Enhanced label with better styling
+      const labelY = barY - 25;
+      const labelHeight = 20;
 
-    // Label background with gradient
-    const labelGradient = ctx.createLinearGradient(barX, labelY, barX, labelY + labelHeight);
-    labelGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
-    labelGradient.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
-    ctx.fillStyle = labelGradient;
-    ctx.fillRect(barX, labelY, barWidth, labelHeight);
+      // Label background with gradient
+      const labelGradient = ctx.createLinearGradient(barX, labelY, barX, labelY + labelHeight);
+      labelGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+      labelGradient.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+      ctx.fillStyle = labelGradient;
+      ctx.fillRect(barX, labelY, barWidth, labelHeight);
 
-    // Label border
-    ctx.strokeStyle = '#444444';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(barX, labelY, barWidth, labelHeight);
+      // Label border
+      ctx.strokeStyle = '#444444';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, labelY, barWidth, labelHeight);
 
-    // Label text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 12px Arial';
-    ctx.textAlign = 'center';
+      // Label text
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'center';
 
-    if (showLostMessage) {
-      ctx.fillStyle = '#FF6666';
-      ctx.fillText('Perfect Rainbow Lost! Starting Over...', barX + barWidth / 2, labelY + 14);
-    } else {
-      ctx.fillText(`Rainbow Progress (Perfect: ${perfectCount})`, barX + barWidth / 2, labelY + 14);
-    }
-  }, []);
+      if (showLostMessage) {
+        ctx.fillStyle = '#FF6666';
+        ctx.fillText('Perfect Rainbow Lost! Starting Over...', barX + barWidth / 2, labelY + 14);
+      } else {
+        ctx.fillText(`Rainbow Progress (Perfect: ${perfectCount})`, barX + barWidth / 2, labelY + 14);
+      }
+    },
+    [],
+  );
 
   const drawPowerUpTimers = useCallback((ctx: CanvasRenderingContext2D, gameState: GameState) => {
     const now = Date.now();
@@ -374,8 +378,10 @@ export function useGameCanvas() {
     }
   }, []);
 
-  const drawPowerUpMessages = useCallback((ctx: CanvasRenderingContext2D, gameState: GameState) => {
-    let messageY = 200;
+  const drawPowerUpMessages = useCallback((ctx: CanvasRenderingContext2D, gameState: GameState, focusMode = false) => {
+    // Adjust message position based on focus mode
+    let messageY = focusMode ? 300 : 200;
+    const centerX = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH / 2 : GAME_CONSTANTS.CANVAS_WIDTH / 2;
 
     // Draw speed boost message
     if (gameState.showSpeedBoostMessage) {
@@ -386,7 +392,7 @@ export function useGameCanvas() {
 
       // Add animation
       const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
-      ctx.translate(400, messageY);
+      ctx.translate(centerX, messageY);
       ctx.scale(scale, scale);
       ctx.fillText('⚡ SPEED UP! ⚡', 0, 0);
       ctx.restore();
@@ -401,13 +407,12 @@ export function useGameCanvas() {
 
       // Rainbow text effect
       const text = '🌈 AUTO COLLECT! 🌈';
-      const x = 400;
 
       for (let i = 0; i < text.length; i++) {
         const hue = (Date.now() * 0.1 + i * 20) % 360;
         ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
         ctx.font = 'bold 24px Arial';
-        ctx.fillText(text[i], x - text.length * 7 + i * 14, messageY);
+        ctx.fillText(text[i], centerX - text.length * 7 + i * 14, messageY);
       }
 
       ctx.restore();
@@ -423,7 +428,7 @@ export function useGameCanvas() {
 
       // Add animation
       const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
-      ctx.translate(400, messageY);
+      ctx.translate(centerX, messageY);
       ctx.scale(scale, scale);
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 2;
@@ -443,7 +448,7 @@ export function useGameCanvas() {
 
       // Add animation
       const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
-      ctx.translate(400, messageY);
+      ctx.translate(centerX, messageY);
       ctx.scale(scale, scale);
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 2;
@@ -463,7 +468,7 @@ export function useGameCanvas() {
 
       // Add animation
       const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
-      ctx.translate(400, messageY);
+      ctx.translate(centerX, messageY);
       ctx.scale(scale, scale);
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
@@ -480,9 +485,14 @@ export function useGameCanvas() {
       drawWeatherEffects?: (ctx: CanvasRenderingContext2D, timeOfDay?: 'day' | 'night') => void,
       drawStars?: (ctx: CanvasRenderingContext2D) => void,
       isLightningFlash?: boolean,
+      focusMode = false,
     ) => {
+      // Get canvas dimensions based on focus mode
+      const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
+      const canvasHeight = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_HEIGHT : GAME_CONSTANTS.CANVAS_HEIGHT;
+
       // Enhanced sky gradient with day/night cycle
-      const gradient = ctx.createLinearGradient(0, 0, 0, GAME_CONSTANTS.CANVAS_HEIGHT);
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
 
       if (isLightningFlash) {
         // Lightning flash effect
@@ -515,7 +525,7 @@ export function useGameCanvas() {
         }
       }
       ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
       // Draw stars for nighttime
       if (gameState.timeOfDay === 'night' && !gameState.isRainShower && drawStars) {
@@ -527,10 +537,10 @@ export function useGameCanvas() {
         drawWeatherEffects(ctx, gameState.timeOfDay);
       }
 
-      // Enhanced rainbow arc with glow
-      const centerX = GAME_CONSTANTS.RAINBOW_CENTER_X;
-      const centerY = GAME_CONSTANTS.RAINBOW_CENTER_Y;
-      const radius = GAME_CONSTANTS.RAINBOW_BASE_RADIUS;
+      // Enhanced rainbow arc with glow - adjust position for focus mode
+      const centerX = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_X : GAME_CONSTANTS.RAINBOW_CENTER_X;
+      const centerY = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_Y : GAME_CONSTANTS.RAINBOW_CENTER_Y;
+      const radius = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_BASE_RADIUS : GAME_CONSTANTS.RAINBOW_BASE_RADIUS;
 
       for (let i = 0; i < RAINBOW_COLORS.length; i++) {
         ctx.strokeStyle = RAINBOW_COLORS[i].color;
@@ -542,13 +552,14 @@ export function useGameCanvas() {
       }
       ctx.globalAlpha = 1;
 
-      // Enhanced rain effect
+      // Enhanced rain effect - adjust for canvas size
       if (gameState.isRainShower) {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.lineWidth = 2;
-        for (let i = 0; i < 150; i++) {
-          const x = Math.random() * GAME_CONSTANTS.CANVAS_WIDTH;
-          const y = (Date.now() * 0.8 + i * 15) % (GAME_CONSTANTS.CANVAS_HEIGHT + 20);
+        const rainDropCount = focusMode ? 200 : 150;
+        for (let i = 0; i < rainDropCount; i++) {
+          const x = Math.random() * canvasWidth;
+          const y = (Date.now() * 0.8 + i * 15) % (canvasHeight + 20);
           ctx.beginPath();
           ctx.moveTo(x, y);
           ctx.lineTo(x - 8, y + 15);
@@ -556,7 +567,7 @@ export function useGameCanvas() {
         }
       }
 
-      drawRainbowProgressBar(ctx, gameState.nextColorIndex, gameState.perfectRainbowCount, gameState.showPerfectRainbowLost);
+      drawRainbowProgressBar(ctx, gameState.nextColorIndex, gameState.perfectRainbowCount, gameState.showPerfectRainbowLost, focusMode);
     },
     [drawRainbowProgressBar],
   );
@@ -573,9 +584,13 @@ export function useGameCanvas() {
       drawStars: (ctx: CanvasRenderingContext2D) => void,
       isLightningFlash: boolean,
       isDamaged = false,
+      focusMode = false,
     ) => {
-      ctx.clearRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
-      drawBackground(ctx, gameState, drawWeatherEffects, drawStars, isLightningFlash);
+      const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
+      const canvasHeight = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_HEIGHT : GAME_CONSTANTS.CANVAS_HEIGHT;
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      drawBackground(ctx, gameState, drawWeatherEffects, drawStars, isLightningFlash, focusMode);
 
       // Draw drops with target color highlighting
       drops.forEach((drop) => {
@@ -591,54 +606,63 @@ export function useGameCanvas() {
       drawPowerUpTimers(ctx, gameState);
 
       // Draw power-up messages
-      drawPowerUpMessages(ctx, gameState);
+      drawPowerUpMessages(ctx, gameState, focusMode);
 
       // Enhanced auto-collect effect
       if (gameState.isAutoCollecting) {
-        const gradient = ctx.createRadialGradient(400, 300, 0, 400, 300, 400);
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(canvasWidth, canvasHeight) / 2);
         gradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
         gradient.addColorStop(1, 'rgba(255, 215, 0, 0.1)');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 28px Arial';
         ctx.textAlign = 'center';
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 2;
-        ctx.strokeText('✨ AUTO COLLECT ACTIVE! ✨', 400, 300);
-        ctx.fillText('✨ AUTO COLLECT ACTIVE! ✨', 400, 300);
+        ctx.strokeText('✨ AUTO COLLECT ACTIVE! ✨', centerX, centerY);
+        ctx.fillText('✨ AUTO COLLECT ACTIVE! ✨', centerX, centerY);
       }
 
       // Enhanced double points effect
       if (gameState.doublePointsEndTime > Date.now()) {
-        const gradient = ctx.createRadialGradient(400, 300, 0, 400, 300, 400);
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(canvasWidth, canvasHeight) / 2);
         gradient.addColorStop(0, 'rgba(255, 255, 102, 0.2)');
         gradient.addColorStop(1, 'rgba(255, 255, 102, 0.05)');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
         ctx.fillStyle = '#FFFF66';
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
-        ctx.strokeText('✨ DOUBLE POINTS ACTIVE! ✨', 400, 350);
-        ctx.fillText('✨ DOUBLE POINTS ACTIVE! ✨', 400, 350);
+        ctx.strokeText('✨ DOUBLE POINTS ACTIVE! ✨', centerX, centerY + 50);
+        ctx.fillText('✨ DOUBLE POINTS ACTIVE! ✨', centerX, centerY + 50);
       }
 
       // Draw pointer lock instructions if game is playing
       if (gameState.state === 'playing' && !gameState.isPointerLocked) {
+        const centerX = canvasWidth / 2;
+        const instructionY = canvasHeight / 2 - 20;
+
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(200, 280, 400, 40);
+        ctx.fillRect(centerX - 200, instructionY - 20, 400, 40);
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 2;
-        ctx.strokeRect(200, 280, 400, 40);
+        ctx.strokeRect(centerX - 200, instructionY - 20, 400, 40);
 
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Click to lock cursor (ESC to unlock)', 400, 305);
+        ctx.fillText('Click to lock cursor (ESC to unlock)', centerX, instructionY + 5);
       }
     },
     [drawBackground, drawColorDrop, drawPowerUpTimers, drawPowerUpMessages],

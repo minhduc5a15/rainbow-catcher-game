@@ -3,6 +3,9 @@ import { GAME_CONSTANTS } from '@/constants/game';
 import type { GameState } from '@/types/game';
 
 interface GameStore extends GameState {
+  // Focus mode state
+  focusMode: boolean;
+
   // Actions
   startGame: () => void;
   resetGame: () => void;
@@ -36,6 +39,7 @@ interface GameStore extends GameState {
   setShowDoublePointsMessage: (show: boolean) => void;
   setDoublePointsMessageEndTime: (time: number) => void;
   setTimeOfDay: (timeOfDay: 'day' | 'night') => void;
+  setFocusMode: (focusMode: boolean) => void;
   updateGameState: (updates: Partial<GameState>) => void;
 }
 
@@ -74,11 +78,12 @@ const initialGameState: GameState = {
   doublePointsMessageEndTime: 0,
   timeOfDay: 'day',
   manualRainShowerOnly: true,
-  isPaused: false, // New state for pause functionality
+  isPaused: false,
 };
 
 export const useGameStore = create<GameStore>((set) => ({
   ...initialGameState,
+  focusMode: false,
 
   // Actions
   startGame: () => {
@@ -183,6 +188,8 @@ export const useGameStore = create<GameStore>((set) => ({
   setDoublePointsMessageEndTime: (doublePointsMessageEndTime) => set({ doublePointsMessageEndTime }),
 
   setTimeOfDay: (timeOfDay) => set({ timeOfDay }),
+
+  setFocusMode: (focusMode) => set({ focusMode }),
 
   // Batch update for multiple state changes
   updateGameState: (updates) => set(updates),

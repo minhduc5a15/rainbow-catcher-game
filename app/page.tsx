@@ -30,6 +30,23 @@ export default function RainbowCatcher() {
   // Use Zustand store
   const gameState = useGameStore();
 
+  // Get canvas dimensions based on focus mode
+  const getCanvasDimensions = useCallback(() => {
+    return {
+      width: gameState.focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH,
+      height: gameState.focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_HEIGHT : GAME_CONSTANTS.CANVAS_HEIGHT,
+    };
+  }, [gameState.focusMode]);
+
+  // Get cloud properties based on focus mode
+  const getCloudProperties = useCallback(() => {
+    return {
+      y: gameState.focusMode ? GAME_CONSTANTS.FOCUS_CLOUD_Y_POSITION : GAME_CONSTANTS.CLOUD_Y_POSITION,
+      minX: gameState.focusMode ? GAME_CONSTANTS.FOCUS_CLOUD_MIN_X : GAME_CONSTANTS.CLOUD_MIN_X,
+      maxX: gameState.focusMode ? GAME_CONSTANTS.FOCUS_CLOUD_MAX_X : GAME_CONSTANTS.CLOUD_MAX_X,
+    };
+  }, [gameState.focusMode]);
+
   const cloudRef = useRef<Cloud>({
     x: 400,
     y: GAME_CONSTANTS.CLOUD_Y_POSITION,
@@ -131,6 +148,34 @@ export default function RainbowCatcher() {
     [gameState],
   );
 
+  // Handle focus mode toggle
+  const toggleFocusMode = useCallback(() => {
+    const newFocusMode = !gameState.focusMode;
+    gameState.setFocusMode(newFocusMode);
+
+    // Update cloud position constraints
+    const cloudProps = newFocusMode
+      ? {
+          y: GAME_CONSTANTS.FOCUS_CLOUD_Y_POSITION,
+          minX: GAME_CONSTANTS.FOCUS_CLOUD_MIN_X,
+          maxX: GAME_CONSTANTS.FOCUS_CLOUD_MAX_X,
+        }
+      : {
+          y: GAME_CONSTANTS.CLOUD_Y_POSITION,
+          minX: GAME_CONSTANTS.CLOUD_MIN_X,
+          maxX: GAME_CONSTANTS.CLOUD_MAX_X,
+        };
+
+    cloudRef.current.y = cloudProps.y;
+
+    // Adjust cloud X position if it's outside new bounds
+    if (cloudRef.current.x < cloudProps.minX) {
+      cloudRef.current.x = cloudProps.minX;
+    } else if (cloudRef.current.x > cloudProps.maxX) {
+      cloudRef.current.x = cloudProps.maxX;
+    }
+  }, [gameState]);
+
   const updateGame = useCallback(() => {
     if (gameState.state !== 'playing' || gameState.isPaused) return;
 
@@ -141,6 +186,7 @@ export default function RainbowCatcher() {
     if (!ctx) return;
 
     const now = Date.now();
+    const cloudProps = getCloudProperties();
 
     // Update damage flash
     if (damageFlashRef.current > 0) {
@@ -258,21 +304,23 @@ export default function RainbowCatcher() {
 
     // Update cloud position with improved mouse control and reverse effect
     if (mouseXRef.current > 0 && !cloud.isFrozen) {
-      const targetX = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, mouseXRef.current));
+      const targetX = Math.max(cloudProps.minX, Math.min(cloudProps.maxX, mouseXRef.current));
       const diff = targetX - cloud.x;
 
       const responsiveness = gameState.isPointerLocked ? GAME_CONSTANTS.MOUSE_RESPONSIVENESS_LOCKED : GAME_CONSTANTS.MOUSE_RESPONSIVENESS;
       cloud.x += diff * responsiveness * cloud.speedMultiplier;
 
       // Keep cloud within bounds
-      cloud.x = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, cloud.x));
+      cloud.x = Math.max(cloudProps.minX, Math.min(cloudProps.maxX, cloud.x));
     }
 
-    // Update drops with cloud position for rocket tracking
-    updateDrops(gameState.gameSpeed, gameState.isRainShower, cloud.x);
+    // Update drops with cloud position for rocket tracking and focus mode
+    updateDrops(gameState.gameSpeed, gameState.isRainShower, cloud.x, gameState.focusMode);
 
     // Handle collisions and drop removal
     const drops = dropsRef.current;
+    const canvasDimensions = getCanvasDimensions();
+
     for (let i = drops.length - 1; i >= 0; i--) {
       const drop = drops[i];
       drop.y += drop.speed;
@@ -284,8 +332,8 @@ export default function RainbowCatcher() {
         continue;
       }
 
-      // Remove drops that fell off screen
-      if (drop.y > GAME_CONSTANTS.CANVAS_HEIGHT + 20) {
+      // Remove drops that fell off screen (use current canvas height)
+      if (drop.y > canvasDimensions.height + 20) {
         drops.splice(i, 1);
       }
     }
@@ -293,7 +341,7 @@ export default function RainbowCatcher() {
     // Increase game speed over time
     gameState.setGameSpeed(Math.min(3, gameState.gameSpeed + 0.001));
 
-    // Render everything
+    // Render everything with focus mode flag
     renderGame(
       ctx,
       gameState,
@@ -305,9 +353,12 @@ export default function RainbowCatcher() {
       drawStars,
       isLightningFlash(),
       damageFlashRef.current > 0,
+      gameState.focusMode,
     );
   }, [
     gameState,
+    getCloudProperties,
+    getCanvasDimensions,
     updateDrops,
     updateWeatherEffects,
     updateStars,
@@ -451,9 +502,11 @@ export default function RainbowCatcher() {
     clearWeatherEffects();
     damageFlashRef.current = 0;
     newGlobalRecordRef.current = false;
+
+    const cloudProps = getCloudProperties();
     cloudRef.current = {
-      x: 400,
-      y: GAME_CONSTANTS.CLOUD_Y_POSITION,
+      x: gameState.focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH / 2 : 400,
+      y: cloudProps.y,
       width: 80,
       height: 40,
       speedMultiplier: 1,
@@ -465,7 +518,7 @@ export default function RainbowCatcher() {
     };
     loadHighScore();
     showGameOverDialogRef.current = false;
-  }, [gameState, clearDrops, clearParticles, clearDamageTexts, clearWeatherEffects, loadHighScore]);
+  }, [gameState, getCloudProperties, clearDrops, clearParticles, clearDamageTexts, clearWeatherEffects, loadHighScore]);
 
   const resetGame = useCallback(() => {
     gameState.resetGame();
@@ -514,7 +567,7 @@ export default function RainbowCatcher() {
     };
   }, [gameState.state, updateGame]);
 
-  // Keyboard controls for pause
+  // Keyboard controls for pause and focus mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
@@ -523,20 +576,24 @@ export default function RainbowCatcher() {
           if (gameState.isPaused) {
             handleResume();
           } else if (gameState.isPointerLocked) {
-            document.exitPointerLock();
             handlePause();
           }
         }
+      } else if (e.code === 'F11') {
+        e.preventDefault();
+        toggleFocusMode();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [gameState.state, gameState.isPaused, gameState.isPointerLocked, handlePause, handleResume]);
+  }, [gameState.state, gameState.isPaused, gameState.isPointerLocked, handlePause, handleResume, toggleFocusMode]);
 
   // Mouse controls and pointer lock
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
+      const cloudProps = getCloudProperties();
+
       if (gameState.isPointerLocked) {
         // Use movement for locked pointer
         let movementX = e.movementX;
@@ -546,7 +603,7 @@ export default function RainbowCatcher() {
           movementX = -movementX;
         }
 
-        mouseXRef.current = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, cloudRef.current.x + movementX));
+        mouseXRef.current = Math.max(cloudProps.minX, Math.min(cloudProps.maxX, cloudRef.current.x + movementX));
       } else {
         // Use absolute position for unlocked pointer
         const canvas = canvasRef.current;
@@ -555,17 +612,21 @@ export default function RainbowCatcher() {
         const rect = canvas.getBoundingClientRect();
         let targetX = e.clientX - rect.left;
 
+        // Scale target X based on canvas size vs display size
+        const canvasDimensions = getCanvasDimensions();
+        targetX = (targetX / rect.width) * canvasDimensions.width;
+
         // Apply reverse effect to absolute positioning
         if (cloudRef.current.isReversed) {
           // Reverse the target position relative to canvas center
-          const canvasCenter = GAME_CONSTANTS.CANVAS_WIDTH / 2;
+          const canvasCenter = canvasDimensions.width / 2;
           targetX = canvasCenter - (targetX - canvasCenter);
         }
 
         mouseXRef.current = targetX;
       }
     },
-    [gameState.isPointerLocked],
+    [gameState.isPointerLocked, getCloudProperties, getCanvasDimensions],
   );
 
   const handleCanvasClick = useCallback(() => {
@@ -625,6 +686,79 @@ export default function RainbowCatcher() {
     }
   };
 
+  const canvasDimensions = getCanvasDimensions();
+
+  // Focus mode layout
+  if (gameState.focusMode) {
+    return (
+      <div className={`min-h-screen ${getBackgroundClass()} flex items-center justify-center transition-all duration-1000`}>
+        <div className="relative">
+          {/* Focus mode stats overlay */}
+          <div className="absolute top-4 left-4 z-10 bg-black/70 rounded-lg p-3 text-white">
+            <div className="flex gap-4 text-sm">
+              <span>
+                Score: <strong className="text-blue-400">{gameState.score}</strong>
+              </span>
+              <span>
+                Lives: <strong className="text-red-400">{'❤️'.repeat(gameState.lives)}</strong>
+              </span>
+              <span>
+                Perfect: <strong className="text-purple-400">{gameState.perfectRainbowCount}</strong> 🌈
+              </span>
+              {gameState.timeOfDay === 'night' && <span className="text-indigo-400">🌙 Night</span>}
+            </div>
+          </div>
+
+          {/* Focus mode controls overlay */}
+          <div className="absolute top-4 right-4 z-10 bg-black/70 rounded-lg p-3 text-white text-sm">
+            <div className="space-y-1">
+              <p>
+                <kbd className="bg-gray-600 px-2 py-1 rounded">F11</kbd> Exit Focus Mode
+              </p>
+              <p>
+                <kbd className="bg-gray-600 px-2 py-1 rounded">Space</kbd> Pause
+              </p>
+              <p>
+                <kbd className="bg-gray-600 px-2 py-1 rounded">ESC</kbd> Unlock Cursor
+              </p>
+            </div>
+          </div>
+
+          <canvas
+            ref={canvasRef}
+            width={canvasDimensions.width}
+            height={canvasDimensions.height}
+            className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-2xl"
+            onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleCanvasClick}
+          />
+
+          {/* Pause Menu Overlay */}
+          {gameState.isPaused && <PauseMenu onContinue={handleResume} onRestart={handleRestart} />}
+
+          {/* Focus mode game UI overlay */}
+          {(gameState.state === 'menu' || gameState.state === 'gameOver') && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+              <div className="bg-white/95 rounded-lg p-8 max-w-md">
+                <GameUI
+                  gameState={gameState}
+                  highScore={highScoreRef.current}
+                  newGlobalRecord={newGlobalRecordRef.current}
+                  onStartGame={startGame}
+                  onResetGame={resetGame}
+                  showGameOverDialog={showGameOverDialogRef.current}
+                  onCloseGameOverDialog={() => (showGameOverDialogRef.current = false)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Normal mode layout
   return (
     <div className={`min-h-screen ${getBackgroundClass()} flex flex-col items-center justify-center p-4 transition-all duration-1000`}>
       <div className="text-center mb-6">
@@ -637,6 +771,9 @@ export default function RainbowCatcher() {
             </Button>
           </Link>
           <GlobalHighScoreDisplay />
+          <Button variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30" onClick={toggleFocusMode}>
+            🎯 Focus Mode (F11)
+          </Button>
         </div>
       </div>
 
@@ -646,8 +783,8 @@ export default function RainbowCatcher() {
         <div className="relative">
           <canvas
             ref={canvasRef}
-            width={GAME_CONSTANTS.CANVAS_WIDTH}
-            height={GAME_CONSTANTS.CANVAS_HEIGHT}
+            width={canvasDimensions.width}
+            height={canvasDimensions.height}
             className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-inner"
             onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
             onMouseLeave={handleMouseLeave}
@@ -673,7 +810,7 @@ export default function RainbowCatcher() {
         <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
         <p>⚡ Golden = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
         <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm</p>
-        <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock) | ⏸️ Press Space to pause</p>
+        <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock) | ⏸️ Press Space to pause | 🎯 Press F11 for Focus Mode</p>
       </div>
 
       {/* Author Section */}

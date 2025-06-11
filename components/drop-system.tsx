@@ -10,11 +10,14 @@ export function useDropSystem() {
   const lastDropTimeRef = useRef(0);
   const dropIdCounter = useRef(0);
 
-  const createDrop = useCallback((gameSpeed: number, isRainShower = false, cloudX = 400): Drop => {
+  const createDrop = useCallback((gameSpeed: number, isRainShower = false, cloudX = 400, focusMode = false): Drop => {
     const dropType = getRandomDropType();
     let color: string;
     let colorIndex: number;
     let speedMultiplier = 1;
+
+    // Get canvas width based on focus mode
+    const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
 
     switch (dropType) {
       case 'lightning':
@@ -67,7 +70,7 @@ export function useDropSystem() {
     const speed = (GAME_CONSTANTS.DROP_BASE_SPEED + gameSpeed * 0.5) * speedMultiplier * (isRainShower ? GAME_CONSTANTS.RAIN_SPEED_MULTIPLIER : 1);
 
     const drop: Drop = {
-      x: Math.random() * (GAME_CONSTANTS.CANVAS_WIDTH - 40) + 20,
+      x: Math.random() * (canvasWidth - 40) + 20,
       y: -10,
       color,
       colorIndex,
@@ -95,7 +98,6 @@ export function useDropSystem() {
 
   const getRandomDropType = useCallback((): Drop['type'] => {
     const rand = Math.random();
-    console.log('Random value:', rand); // Debug log
 
     // Check for special drops first (total ~21.2%)
     let cumulativeProbability = 0;
@@ -103,85 +105,78 @@ export function useDropSystem() {
     // Ultra rare drops
     cumulativeProbability += GAME_CONSTANTS.RAINBOW_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: rainbow');
       return 'rainbow';
     }
 
     cumulativeProbability += GAME_CONSTANTS.HEART_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: heart');
       return 'heart';
     }
 
     // Water drop
     cumulativeProbability += GAME_CONSTANTS.WATER_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: water');
       return 'water';
     }
 
     // Double points
     cumulativeProbability += GAME_CONSTANTS.DOUBLE_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: double');
       return 'double';
     }
 
     // Power-up drops
     cumulativeProbability += GAME_CONSTANTS.LIGHTNING_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: lightning');
       return 'lightning';
     }
 
     cumulativeProbability += GAME_CONSTANTS.HAIL_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: hail');
       return 'hail';
     }
 
     cumulativeProbability += GAME_CONSTANTS.REVERSE_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: reverse');
       return 'reverse';
     }
 
     // Dangerous drops
     cumulativeProbability += GAME_CONSTANTS.BOMB_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: bomb');
       return 'bomb';
     }
 
     cumulativeProbability += GAME_CONSTANTS.ROCKET_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
-      console.log('Generated: rocket');
       return 'rocket';
     }
 
     // Everything else is normal rainbow drops (~78.8%)
-    console.log('Generated: normal (default)');
     return 'normal';
   }, []);
 
   const spawnDrop = useCallback(
-    (gameSpeed: number, isRainShower = false, cloudX = 400) => {
-      const newDrop = createDrop(gameSpeed, isRainShower, cloudX);
+    (gameSpeed: number, isRainShower = false, cloudX = 400, focusMode = false) => {
+      const newDrop = createDrop(gameSpeed, isRainShower, cloudX, focusMode);
       dropsRef.current.push(newDrop);
     },
     [createDrop],
   );
 
   const updateDrops = useCallback(
-    (gameSpeed: number, isRainShower = false, cloudX = 400) => {
+    (gameSpeed: number, isRainShower = false, cloudX = 400, focusMode = false) => {
       const now = Date.now();
       // Faster spawn rate for more drops
       const spawnRate = isRainShower ? 150 : Math.max(300, 800 / gameSpeed);
 
       if (now - lastDropTimeRef.current > spawnRate) {
-        spawnDrop(gameSpeed, isRainShower, cloudX);
+        spawnDrop(gameSpeed, isRainShower, cloudX, focusMode);
         lastDropTimeRef.current = now;
       }
+
+      // Get cloud Y position based on focus mode
+      const cloudY = focusMode ? GAME_CONSTANTS.FOCUS_CLOUD_Y_POSITION : GAME_CONSTANTS.CLOUD_Y_POSITION;
 
       // Update drop movements
       dropsRef.current.forEach((drop) => {
@@ -201,7 +196,7 @@ export function useDropSystem() {
             // Calculate direction towards cloud
             const targetX = cloudX;
             const deltaX = targetX - drop.x;
-            const deltaY = GAME_CONSTANTS.CLOUD_Y_POSITION - drop.y;
+            const deltaY = cloudY - drop.y;
 
             // Normalize direction
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -219,7 +214,8 @@ export function useDropSystem() {
             }
 
             // Keep rocket within canvas bounds
-            drop.x = Math.max(20, Math.min(GAME_CONSTANTS.CANVAS_WIDTH - 20, drop.x));
+            const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
+            drop.x = Math.max(20, Math.min(canvasWidth - 20, drop.x));
           }
         }
       });

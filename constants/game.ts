@@ -53,9 +53,13 @@ export const GAME_CONSTANTS = {
   PARTICLE_LIFETIME: 50,
   PERFECT_PARTICLE_LIFETIME: 60,
 
-  // Canvas dimensions - INCREASED HEIGHT
+  // Canvas dimensions - Normal mode
   CANVAS_WIDTH: 800,
-  CANVAS_HEIGHT: 650, // Increased from 600 to 650
+  CANVAS_HEIGHT: 650,
+
+  // Canvas dimensions - Focus mode (larger)
+  FOCUS_CANVAS_WIDTH: 1200,
+  FOCUS_CANVAS_HEIGHT: 800,
 
   // Drop properties
   DROP_BASE_SPEED: 2,
@@ -64,11 +68,16 @@ export const GAME_CONSTANTS = {
   SPECIAL_DROP_RADIUS: 10,
   LARGE_DROP_RADIUS: 12,
 
-  // Cloud properties - ADJUSTED FOR NEW HEIGHT
-  CLOUD_Y_POSITION: 550, // Adjusted for new canvas height
+  // Cloud properties - Normal mode
+  CLOUD_Y_POSITION: 550,
   CLOUD_COLLISION_RADIUS: 35,
   CLOUD_MIN_X: 40,
   CLOUD_MAX_X: 760,
+
+  // Cloud properties - Focus mode
+  FOCUS_CLOUD_Y_POSITION: 700,
+  FOCUS_CLOUD_MIN_X: 60,
+  FOCUS_CLOUD_MAX_X: 1140,
 
   // Progress bar
   PROGRESS_BAR_WIDTH: 300,
@@ -76,11 +85,20 @@ export const GAME_CONSTANTS = {
   PROGRESS_BAR_X: 250,
   PROGRESS_BAR_Y: 25,
 
+  // Progress bar - Focus mode
+  FOCUS_PROGRESS_BAR_WIDTH: 400,
+  FOCUS_PROGRESS_BAR_X: 400,
+
   // Rainbow arc
   RAINBOW_CENTER_X: 400,
   RAINBOW_CENTER_Y: 80,
   RAINBOW_BASE_RADIUS: 140,
   RAINBOW_SEGMENT_WIDTH: 12,
+
+  // Rainbow arc - Focus mode
+  FOCUS_RAINBOW_CENTER_X: 600,
+  FOCUS_RAINBOW_CENTER_Y: 100,
+  FOCUS_RAINBOW_BASE_RADIUS: 180,
 
   // Weather effects
   BACKGROUND_CLOUD_COUNT: 8,
