@@ -9,6 +9,8 @@ export const GAME_CONSTANTS = {
   LIGHTNING_INTERVAL_MIN: 3000,
   LIGHTNING_INTERVAL_MAX: 8000,
   FREEZE_DURATION: 3000,
+  REVERSE_DURATION: 5000,
+  DOUBLE_POINTS_DURATION: 10000,
 
   // Scoring constants
   NORMAL_DROP_POINTS: 10,
@@ -23,15 +25,27 @@ export const GAME_CONSTANTS = {
   MOUSE_RESPONSIVENESS: 0.15,
   MOUSE_RESPONSIVENESS_LOCKED: 0.8,
 
-  // Drop spawn rates (percentages)
-  RAINBOW_DROP_CHANCE: 0.01,
-  HEART_DROP_CHANCE: 0.01,
+  // Drop spawn rates (percentages) - SPECIAL DROPS ONLY
+  RAINBOW_DROP_CHANCE: 0.003, // 0.3%
+  HEART_DROP_CHANCE: 0.003, // 0.3%
+  WATER_DROP_CHANCE: 0.01, // 1%
 
-  LIGHTNING_DROP_CHANCE: 0.2,
-  HAIL_DROP_CHANCE: 0.2,
+  LIGHTNING_DROP_CHANCE: 0.04, // 4%
+  HAIL_DROP_CHANCE: 0.04, // 4%
+  REVERSE_DROP_CHANCE: 0.04, // 4%
+  DOUBLE_DROP_CHANCE: 0.03, // 3%
 
-  BOMB_DROP_CHANCE: 0.45,
-  ROCKET_DROP_CHANCE: 0.45,
+  BOMB_DROP_CHANCE: 0.06, // 6%
+  ROCKET_DROP_CHANCE: 0.06, // 6%
+
+  // Total special drops: ~21.2%, Normal drops: ~78.8%
+
+  // Drop speed multipliers
+  BOMB_SPEED_MULTIPLIER: 1.8,
+  REVERSE_SPEED_MULTIPLIER: 1.6,
+  HAIL_SPEED_MULTIPLIER: 1.5,
+  ROCKET_SPEED_MULTIPLIER: 1.4,
+  WATER_SPEED_MULTIPLIER: 1.2,
 
   // Visual effects
   PARTICLE_COUNT_NORMAL: 10,
@@ -39,9 +53,9 @@ export const GAME_CONSTANTS = {
   PARTICLE_LIFETIME: 50,
   PERFECT_PARTICLE_LIFETIME: 60,
 
-  // Canvas dimensions
+  // Canvas dimensions - INCREASED HEIGHT
   CANVAS_WIDTH: 800,
-  CANVAS_HEIGHT: 600,
+  CANVAS_HEIGHT: 650, // Increased from 600 to 650
 
   // Drop properties
   DROP_BASE_SPEED: 2,
@@ -50,8 +64,8 @@ export const GAME_CONSTANTS = {
   SPECIAL_DROP_RADIUS: 10,
   LARGE_DROP_RADIUS: 12,
 
-  // Cloud properties
-  CLOUD_Y_POSITION: 500,
+  // Cloud properties - ADJUSTED FOR NEW HEIGHT
+  CLOUD_Y_POSITION: 550, // Adjusted for new canvas height
   CLOUD_COLLISION_RADIUS: 35,
   CLOUD_MIN_X: 40,
   CLOUD_MAX_X: 760,
@@ -73,7 +87,14 @@ export const GAME_CONSTANTS = {
   WIND_COUNT: 5,
   BIRD_COUNT: 3,
 
-  // Scene cycle - Updated to only have day/night
+  // Scene cycle
   PERFECT_RAINBOWS_FOR_SCENE_CHANGE: 5,
   STAR_COUNT: 30,
+
+  // 3D Effects
+  CLOUD_BOB_AMPLITUDE: 3,
+  CLOUD_BOB_FREQUENCY: 0.02,
+  DROP_ROTATION_SPEED: 0.05,
+  PARTICLE_Z_RANGE: 50,
+  SHADOW_OFFSET_MAX: 8,
 };

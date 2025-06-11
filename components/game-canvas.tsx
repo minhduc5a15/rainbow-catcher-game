@@ -1,12 +1,55 @@
 'use client';
 
-import { useCallback } from 'react';
+import type React from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import type { Cloud, Drop, GameState } from '@/types/game';
 import { RAINBOW_COLORS } from '@/types/game';
 import { GAME_CONSTANTS } from '@/constants/game';
 
+interface GameCanvasProps {
+  dropPosition: { x: number; y: number } | null;
+}
+
+const GameCanvas: React.FC<GameCanvasProps> = ({ dropPosition }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (dropPosition) {
+      drawDrop(ctx, dropPosition.x, dropPosition.y);
+    }
+  }, [dropPosition]);
+
+  const drawDrop = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, 2 * Math.PI);
+    ctx.fillStyle = 'blue';
+    ctx.fill();
+    ctx.closePath();
+  };
+
+  return <canvas ref={canvasRef} width={300} height={200} style={{ border: '1px solid black' }} />;
+};
+
+export default GameCanvas;
+
 export function useGameCanvas() {
   const drawCloud = useCallback((ctx: CanvasRenderingContext2D, cloud: Cloud, isDamaged = false) => {
+    ctx.save();
+
+    // Apply 3D transformations
+    ctx.translate(cloud.x, cloud.y + cloud.bobOffset);
+    ctx.scale(cloud.scale, cloud.scale);
+    ctx.rotate(cloud.rotation);
+
     // Add freeze effect
     if (cloud.isFrozen) {
       ctx.shadowColor = '#00FFFF';
@@ -21,6 +64,13 @@ export function useGameCanvas() {
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
     }
+    // Add reverse effect
+    else if (cloud.isReversed) {
+      ctx.shadowColor = '#800080';
+      ctx.shadowBlur = 25;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
 
     // Add damage flash effect
     if (isDamaged) {
@@ -30,7 +80,7 @@ export function useGameCanvas() {
       ctx.shadowOffsetY = 0;
     }
 
-    // Enhanced cloud drawing with freeze effect
+    // Enhanced cloud drawing with effects
     let cloudColor = '#FFFFFF';
     if (isDamaged) {
       cloudColor = '#FFB3B3';
@@ -38,6 +88,8 @@ export function useGameCanvas() {
       cloudColor = '#B0E0E6'; // Light blue for frozen
     } else if (cloud.speedMultiplier > 1) {
       cloudColor = '#FFFACD';
+    } else if (cloud.isReversed) {
+      cloudColor = '#E6E6FA'; // Light purple for reversed
     }
 
     ctx.fillStyle = cloudColor;
@@ -46,26 +98,32 @@ export function useGameCanvas() {
     ctx.beginPath();
 
     // Bottom layer (larger circles)
-    ctx.arc(cloud.x - 25, cloud.y + 5, 18, 0, Math.PI * 2);
-    ctx.arc(cloud.x, cloud.y, 25, 0, Math.PI * 2);
-    ctx.arc(cloud.x + 25, cloud.y + 5, 18, 0, Math.PI * 2);
+    ctx.arc(-25, 5, 18, 0, Math.PI * 2);
+    ctx.arc(0, 0, 25, 0, Math.PI * 2);
+    ctx.arc(25, 5, 18, 0, Math.PI * 2);
 
     // Middle layer
-    ctx.arc(cloud.x - 15, cloud.y - 10, 15, 0, Math.PI * 2);
-    ctx.arc(cloud.x + 15, cloud.y - 10, 15, 0, Math.PI * 2);
+    ctx.arc(-15, -10, 15, 0, Math.PI * 2);
+    ctx.arc(15, -10, 15, 0, Math.PI * 2);
 
     // Top layer (smaller circles for detail)
-    ctx.arc(cloud.x - 8, cloud.y - 20, 12, 0, Math.PI * 2);
-    ctx.arc(cloud.x + 8, cloud.y - 20, 12, 0, Math.PI * 2);
-    ctx.arc(cloud.x, cloud.y - 15, 14, 0, Math.PI * 2);
+    ctx.arc(-8, -20, 12, 0, Math.PI * 2);
+    ctx.arc(8, -20, 12, 0, Math.PI * 2);
+    ctx.arc(0, -15, 14, 0, Math.PI * 2);
 
     ctx.fill();
 
     // Add cloud highlights for 3D effect
-    ctx.fillStyle = isDamaged ? 'rgba(255, 255, 255, 0.4)' : cloud.isFrozen ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.6)';
+    ctx.fillStyle = isDamaged
+      ? 'rgba(255, 255, 255, 0.4)'
+      : cloud.isFrozen
+      ? 'rgba(255, 255, 255, 0.8)'
+      : cloud.isReversed
+      ? 'rgba(255, 255, 255, 0.7)'
+      : 'rgba(255, 255, 255, 0.6)';
     ctx.beginPath();
-    ctx.arc(cloud.x - 8, cloud.y - 8, 8, 0, Math.PI * 2);
-    ctx.arc(cloud.x + 12, cloud.y - 12, 6, 0, Math.PI * 2);
+    ctx.arc(-8, -8, 8, 0, Math.PI * 2);
+    ctx.arc(12, -12, 6, 0, Math.PI * 2);
     ctx.fill();
 
     // Add freeze crystals effect
@@ -77,10 +135,10 @@ export function useGameCanvas() {
       // Draw ice crystals around the cloud
       for (let i = 0; i < 6; i++) {
         const angle = (i * Math.PI) / 3;
-        const x1 = cloud.x + Math.cos(angle) * 35;
-        const y1 = cloud.y + Math.sin(angle) * 35;
-        const x2 = cloud.x + Math.cos(angle) * 45;
-        const y2 = cloud.y + Math.sin(angle) * 45;
+        const x1 = Math.cos(angle) * 35;
+        const y1 = Math.sin(angle) * 35;
+        const x2 = Math.cos(angle) * 45;
+        const y2 = Math.sin(angle) * 45;
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -98,41 +156,78 @@ export function useGameCanvas() {
       ctx.globalAlpha = 1;
     }
 
+    // Add reverse arrows effect
+    if (cloud.isReversed) {
+      ctx.strokeStyle = '#800080';
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.8;
+
+      // Draw reverse arrows around the cloud
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI) / 2;
+        const x = Math.cos(angle) * 40;
+        const y = Math.sin(angle) * 40;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle + Math.PI);
+
+        // Draw arrow
+        ctx.beginPath();
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(8, 0);
+        ctx.moveTo(4, -4);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(4, 4);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+
     // Add cute cloud face
     if (!isDamaged) {
       // Eyes
       ctx.fillStyle = '#333333';
       ctx.beginPath();
-      ctx.arc(cloud.x - 8, cloud.y - 5, 2, 0, Math.PI * 2);
-      ctx.arc(cloud.x + 8, cloud.y - 5, 2, 0, Math.PI * 2);
+      ctx.arc(-8, -5, 2, 0, Math.PI * 2);
+      ctx.arc(8, -5, 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Mouth - different for frozen state
-      ctx.strokeStyle = cloud.isFrozen ? '#0066CC' : '#333333';
+      // Mouth - different for different states
+      ctx.strokeStyle = cloud.isFrozen ? '#0066CC' : cloud.isReversed ? '#800080' : '#333333';
       ctx.lineWidth = 2;
       ctx.beginPath();
       if (cloud.isFrozen) {
         // Surprised/frozen expression
-        ctx.arc(cloud.x, cloud.y + 2, 4, 0, Math.PI * 2);
+        ctx.arc(0, 2, 4, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (cloud.isReversed) {
+        // Confused expression
+        ctx.moveTo(-6, 2);
+        ctx.lineTo(-2, 6);
+        ctx.lineTo(2, 2);
+        ctx.lineTo(6, 6);
         ctx.stroke();
       } else {
         // Normal smile
-        ctx.arc(cloud.x, cloud.y + 2, 8, 0, Math.PI);
+        ctx.arc(0, 2, 8, 0, Math.PI);
         ctx.stroke();
       }
     } else {
       // Hurt expression
       ctx.fillStyle = '#FF0000';
       ctx.beginPath();
-      ctx.arc(cloud.x - 8, cloud.y - 5, 2, 0, Math.PI * 2);
-      ctx.arc(cloud.x + 8, cloud.y - 5, 2, 0, Math.PI * 2);
+      ctx.arc(-8, -5, 2, 0, Math.PI * 2);
+      ctx.arc(8, -5, 2, 0, Math.PI * 2);
       ctx.fill();
 
       // Frown
       ctx.strokeStyle = '#FF0000';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cloud.x, cloud.y + 8, 8, Math.PI, 0);
+      ctx.arc(0, 8, 8, Math.PI, 0);
       ctx.stroke();
     }
 
@@ -140,36 +235,81 @@ export function useGameCanvas() {
     ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
+
+    ctx.restore();
   }, []);
 
   const drawColorDrop = useCallback((ctx: CanvasRenderingContext2D, drop: Drop, isTargetColor = false) => {
+    ctx.save();
+
+    // Apply 3D transformations
+    ctx.translate(drop.x, drop.y);
+    if (drop.scale) {
+      ctx.scale(drop.scale, drop.scale);
+    }
+    if (drop.rotation) {
+      ctx.rotate(drop.rotation);
+    }
+
+    // REMOVED: Shadow effects for drops
+
     // Add pulsing effect for target color
     if (isTargetColor && drop.type === 'normal') {
       const pulseSize = 2 + Math.sin(Date.now() * 0.01);
-      ctx.shadowColor = drop.color;
-      ctx.shadowBlur = 15;
 
       // Outer glow ring
       ctx.strokeStyle = drop.color;
       ctx.lineWidth = 3;
       ctx.globalAlpha = 0.6;
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.LARGE_DROP_RADIUS + pulseSize, 0, Math.PI * 2);
+      ctx.arc(0, 0, GAME_CONSTANTS.LARGE_DROP_RADIUS + pulseSize, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
 
-    if (drop.type === 'lightning') {
+    if (drop.type === 'water') {
+      // Water drop with realistic water effect
+      const waterPulse = 1 + Math.sin(Date.now() * 0.03) * 0.1;
+
+      // Main water body with gradient
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS);
+      gradient.addColorStop(0, '#87CEEB');
+      gradient.addColorStop(0.7, '#00BFFF');
+      gradient.addColorStop(1, '#0080FF');
+
+      ctx.fillStyle = gradient;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+
+      // Draw water drop shape
+      ctx.beginPath();
+      ctx.arc(0, 2, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * waterPulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Add water highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.beginPath();
+      ctx.arc(-3, -1, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Water symbol
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.strokeText('💧', 0, 4);
+      ctx.fillText('💧', 0, 4);
+    } else if (drop.type === 'lightning') {
       // Enhanced golden drop with sparkle animation
       const sparkleOffset = Math.sin(Date.now() * 0.02) * 2;
       ctx.fillStyle = drop.color;
       ctx.strokeStyle = '#FFA500';
       ctx.lineWidth = 2;
-      ctx.shadowColor = '#FFD700';
-      ctx.shadowBlur = 10;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS, 0, Math.PI * 2);
+      ctx.arc(0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -178,9 +318,8 @@ export function useGameCanvas() {
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
       ctx.save();
-      ctx.translate(drop.x, drop.y + 4);
       ctx.rotate(sparkleOffset * 0.1);
-      ctx.fillText('⚡', 0, 0);
+      ctx.fillText('⚡', 0, 4);
       ctx.restore();
     } else if (drop.type === 'bomb') {
       // Enhanced black drop with danger pulsing
@@ -188,18 +327,16 @@ export function useGameCanvas() {
       ctx.fillStyle = drop.color;
       ctx.strokeStyle = '#FF0000';
       ctx.lineWidth = 2 * dangerPulse;
-      ctx.shadowColor = '#FF0000';
-      ctx.shadowBlur = 15 * dangerPulse;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS, 0, Math.PI * 2);
+      ctx.arc(0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#FF0000';
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('💣', drop.x, drop.y + 4);
+      ctx.fillText('💣', 0, 4);
     } else if (drop.type === 'rainbow') {
       // Enhanced rainbow drop with rotating colors
       const time = Date.now() * 0.01;
@@ -207,11 +344,9 @@ export function useGameCanvas() {
       ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 3;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.shadowBlur = 20;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.LARGE_DROP_RADIUS, 0, Math.PI * 2);
+      ctx.arc(0, 0, GAME_CONSTANTS.LARGE_DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -220,9 +355,8 @@ export function useGameCanvas() {
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
       ctx.save();
-      ctx.translate(drop.x, drop.y + 4);
       ctx.rotate(time * 0.1);
-      ctx.fillText('🌈', 0, 0);
+      ctx.fillText('🌈', 0, 4);
       ctx.restore();
     } else if (drop.type === 'heart') {
       // Heart drop with pulsing effect
@@ -230,25 +364,19 @@ export function useGameCanvas() {
       ctx.fillStyle = drop.color;
       ctx.strokeStyle = '#FF1493';
       ctx.lineWidth = 2;
-      ctx.shadowColor = '#FF69B4';
-      ctx.shadowBlur = 15;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * heartPulse, 0, Math.PI * 2);
+      ctx.arc(0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * heartPulse, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#FFFFFF';
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('❤️', drop.x, drop.y + 4);
+      ctx.fillText('❤️', 0, 4);
     } else if (drop.type === 'hail') {
       // Enhanced hail drop with better visibility
       const hailPulse = 1 + Math.sin(Date.now() * 0.03) * 0.15;
-
-      // Outer glow for better visibility
-      ctx.shadowColor = '#00FFFF';
-      ctx.shadowBlur = 15;
 
       // Main hail body with cyan color for better contrast
       ctx.fillStyle = '#00BFFF';
@@ -262,8 +390,8 @@ export function useGameCanvas() {
 
       for (let i = 0; i < sides; i++) {
         const angle = (i * 2 * Math.PI) / sides + Math.PI / 6;
-        const x = drop.x + size * Math.cos(angle);
-        const y = drop.y + size * Math.sin(angle);
+        const x = size * Math.cos(angle);
+        const y = size * Math.sin(angle);
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -279,10 +407,10 @@ export function useGameCanvas() {
       ctx.strokeStyle = '#87CEEB';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(drop.x - size * 0.5, drop.y);
-      ctx.lineTo(drop.x + size * 0.5, drop.y);
-      ctx.moveTo(drop.x, drop.y - size * 0.5);
-      ctx.lineTo(drop.x, drop.y + size * 0.5);
+      ctx.moveTo(-size * 0.5, 0);
+      ctx.lineTo(size * 0.5, 0);
+      ctx.moveTo(0, -size * 0.5);
+      ctx.lineTo(0, size * 0.5);
       ctx.stroke();
 
       // Ice crystal symbol with better contrast
@@ -291,8 +419,8 @@ export function useGameCanvas() {
       ctx.textAlign = 'center';
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1;
-      ctx.strokeText('❄️', drop.x, drop.y + 4);
-      ctx.fillText('❄️', drop.x, drop.y + 4);
+      ctx.strokeText('❄️', 0, 4);
+      ctx.fillText('❄️', 0, 4);
     } else if (drop.type === 'rocket') {
       // Rocket drop with flame trail and rotation
       const time = Date.now() * 0.01;
@@ -302,11 +430,9 @@ export function useGameCanvas() {
       ctx.fillStyle = '#FF4500';
       ctx.strokeStyle = '#FF0000';
       ctx.lineWidth = 2;
-      ctx.shadowColor = '#FF6600';
-      ctx.shadowBlur = 15;
 
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * rocketPulse, 0, Math.PI * 2);
+      ctx.arc(0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * rocketPulse, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
@@ -314,7 +440,7 @@ export function useGameCanvas() {
       ctx.fillStyle = `rgba(255, ${100 + Math.sin(time * 5) * 50}, 0, 0.7)`;
       for (let i = 0; i < 5; i++) {
         ctx.beginPath();
-        ctx.arc(drop.x - i * 3, drop.y + i * 5, (5 - i) * 2, 0, Math.PI * 2);
+        ctx.arc(-i * 3, i * 5, (5 - i) * 2, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -323,33 +449,118 @@ export function useGameCanvas() {
       ctx.font = 'bold 16px Arial';
       ctx.textAlign = 'center';
       ctx.save();
-      ctx.translate(drop.x, drop.y + 4);
       if (drop.angle !== undefined) {
         ctx.rotate(drop.angle * 0.1);
       }
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1;
-      ctx.strokeText('🚀', 0, 0);
-      ctx.fillText('🚀', 0, 0);
+      ctx.strokeText('🚀', 0, 4);
+      ctx.fillText('🚀', 0, 4);
       ctx.restore();
+    } else if (drop.type === 'reverse') {
+      // Reverse drop with spinning arrows
+      const reversePulse = 1 + Math.sin(Date.now() * 0.02) * 0.15;
+      const time = Date.now() * 0.01;
+
+      // Main reverse body
+      ctx.fillStyle = drop.color;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 3;
+
+      ctx.beginPath();
+      ctx.arc(0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * reversePulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Spinning arrows
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.rotate(time * 0.2);
+
+      // Draw arrows pointing in opposite directions
+      for (let i = 0; i < 2; i++) {
+        ctx.save();
+        ctx.rotate(i * Math.PI);
+
+        ctx.beginPath();
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(8, 0);
+        ctx.moveTo(4, -4);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(4, 4);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      // Reverse symbol
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.strokeText('⇄', 0, 4);
+      ctx.fillText('⇄', 0, 4);
+    } else if (drop.type === 'double') {
+      // Double points drop with x2 animation
+      const doublePulse = 1 + Math.sin(Date.now() * 0.02) * 0.2;
+      const time = Date.now() * 0.01;
+
+      // Main double body with bright yellow
+      ctx.fillStyle = drop.color;
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 3;
+
+      ctx.beginPath();
+      ctx.arc(0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * doublePulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Sparkle effects
+      ctx.fillStyle = '#FFFFFF';
+      for (let i = 0; i < 4; i++) {
+        const angle = (time + (i * Math.PI) / 2) % (Math.PI * 2);
+        const sparkleX = Math.cos(angle) * 15;
+        const sparkleY = Math.sin(angle) * 15;
+
+        ctx.save();
+        ctx.translate(sparkleX, sparkleY);
+        ctx.rotate(time * 0.5);
+        ctx.font = '8px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('✨', 0, 0);
+        ctx.restore();
+      }
+
+      // x2 symbol
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.strokeText('x2', 0, 4);
+      ctx.fillText('x2', 0, 4);
     } else {
       // Enhanced normal drop
       ctx.fillStyle = drop.color;
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(drop.x, drop.y, GAME_CONSTANTS.DROP_RADIUS, 0, Math.PI * 2);
+      ctx.arc(0, 0, GAME_CONSTANTS.DROP_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       // Enhanced highlight
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.beginPath();
-      ctx.arc(drop.x - 2, drop.y - 2, 4, 0, Math.PI * 2);
+      ctx.arc(-2, -2, 4, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    ctx.shadowBlur = 0;
+    ctx.restore();
   }, []);
 
   const drawRainbowProgressBar = useCallback((ctx: CanvasRenderingContext2D, nextColorIndex: number, perfectCount: number, showLostMessage = false) => {
@@ -381,8 +592,6 @@ export function useGameCanvas() {
         gradient.addColorStop(1, `${RAINBOW_COLORS[i].color}CC`);
 
         ctx.fillStyle = gradient;
-        ctx.shadowColor = RAINBOW_COLORS[i].color;
-        ctx.shadowBlur = 8;
         ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
 
         // Add shine effect
@@ -394,8 +603,6 @@ export function useGameCanvas() {
         ctx.fillStyle = `${RAINBOW_COLORS[i].color}${Math.floor(pulse * 255)
           .toString(16)
           .padStart(2, '0')}`;
-        ctx.shadowColor = RAINBOW_COLORS[i].color;
-        ctx.shadowBlur = 12;
         ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
 
         // Animated border
@@ -405,7 +612,6 @@ export function useGameCanvas() {
       } else {
         // Incomplete segments
         ctx.fillStyle = '#555555';
-        ctx.shadowBlur = 0;
         ctx.fillRect(segmentX + 1, barY + 1, segmentWidth - 2, barHeight - 2);
       }
     }
@@ -416,7 +622,6 @@ export function useGameCanvas() {
     borderGradient.addColorStop(1, '#333333');
     ctx.strokeStyle = borderGradient;
     ctx.lineWidth = 2;
-    ctx.shadowBlur = 0;
     ctx.strokeRect(barX, barY, barWidth, barHeight);
 
     // Segment dividers
@@ -450,8 +655,6 @@ export function useGameCanvas() {
     ctx.fillStyle = '#FFFFFF';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 2;
 
     if (showLostMessage) {
       ctx.fillStyle = '#FF6666';
@@ -459,12 +662,11 @@ export function useGameCanvas() {
     } else {
       ctx.fillText(`Rainbow Progress (Perfect: ${perfectCount})`, barX + barWidth / 2, labelY + 14);
     }
-
-    ctx.shadowBlur = 0;
   }, []);
 
   const drawPowerUpTimers = useCallback((ctx: CanvasRenderingContext2D, gameState: GameState) => {
     const now = Date.now();
+    let timerY = 60;
 
     // Draw speed boost timer if active
     if (gameState.cloudSpeedBoostEndTime > now) {
@@ -472,26 +674,27 @@ export function useGameCanvas() {
       const barWidth = 150;
       const barHeight = 10;
       const barX = 20;
-      const barY = 60;
 
       // Background
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
+      ctx.fillRect(barX, timerY, barWidth, barHeight);
 
       // Progress
       ctx.fillStyle = '#FFD700';
-      ctx.fillRect(barX, barY, barWidth * timeLeft, barHeight);
+      ctx.fillRect(barX, timerY, barWidth * timeLeft, barHeight);
 
       // Border
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 1;
-      ctx.strokeRect(barX, barY, barWidth, barHeight);
+      ctx.strokeRect(barX, timerY, barWidth, barHeight);
 
       // Label
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Speed Boost', barX, barY - 5);
+      ctx.fillText('Speed Boost', barX, timerY - 5);
+
+      timerY += 30;
     }
 
     // Draw auto collect timer if active
@@ -500,14 +703,13 @@ export function useGameCanvas() {
       const barWidth = 150;
       const barHeight = 10;
       const barX = 20;
-      const barY = 90;
 
       // Background
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
+      ctx.fillRect(barX, timerY, barWidth, barHeight);
 
       // Progress with rainbow gradient
-      const gradient = ctx.createLinearGradient(barX, barY, barX + barWidth * timeLeft, barY);
+      const gradient = ctx.createLinearGradient(barX, timerY, barX + barWidth * timeLeft, timerY);
       gradient.addColorStop(0, 'red');
       gradient.addColorStop(0.17, 'orange');
       gradient.addColorStop(0.33, 'yellow');
@@ -516,18 +718,20 @@ export function useGameCanvas() {
       gradient.addColorStop(0.83, 'indigo');
       gradient.addColorStop(1, 'violet');
       ctx.fillStyle = gradient;
-      ctx.fillRect(barX, barY, barWidth * timeLeft, barHeight);
+      ctx.fillRect(barX, timerY, barWidth * timeLeft, barHeight);
 
       // Border
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 1;
-      ctx.strokeRect(barX, barY, barWidth, barHeight);
+      ctx.strokeRect(barX, timerY, barWidth, barHeight);
 
       // Label
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Auto Collect', barX, barY - 5);
+      ctx.fillText('Auto Collect', barX, timerY - 5);
+
+      timerY += 30;
     }
 
     // Draw freeze timer if active
@@ -536,67 +740,124 @@ export function useGameCanvas() {
       const barWidth = 150;
       const barHeight = 10;
       const barX = 20;
-      const barY = 120;
 
       // Background
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
+      ctx.fillRect(barX, timerY, barWidth, barHeight);
 
       // Progress with ice blue color
       ctx.fillStyle = '#00BFFF';
-      ctx.fillRect(barX, barY, barWidth * timeLeft, barHeight);
+      ctx.fillRect(barX, timerY, barWidth * timeLeft, barHeight);
 
       // Border
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 1;
-      ctx.strokeRect(barX, barY, barWidth, barHeight);
+      ctx.strokeRect(barX, timerY, barWidth, barHeight);
 
       // Label
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Frozen', barX, barY - 5);
+      ctx.fillText('Frozen', barX, timerY - 5);
+
+      timerY += 30;
+    }
+
+    // Draw reverse timer if active
+    if (gameState.cloudReverseEndTime > now) {
+      const timeLeft = (gameState.cloudReverseEndTime - now) / GAME_CONSTANTS.REVERSE_DURATION;
+      const barWidth = 150;
+      const barHeight = 10;
+      const barX = 20;
+
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(barX, timerY, barWidth, barHeight);
+
+      // Progress with purple color
+      ctx.fillStyle = '#800080';
+      ctx.fillRect(barX, timerY, barWidth * timeLeft, barHeight);
+
+      // Border
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, timerY, barWidth, barHeight);
+
+      // Label
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('Reversed', barX, timerY - 5);
+
+      timerY += 30;
+    }
+
+    // Draw double points timer if active
+    if (gameState.doublePointsEndTime > now) {
+      const timeLeft = (gameState.doublePointsEndTime - now) / GAME_CONSTANTS.DOUBLE_POINTS_DURATION;
+      const barWidth = 150;
+      const barHeight = 10;
+      const barX = 20;
+
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(barX, timerY, barWidth, barHeight);
+
+      // Progress with bright yellow color
+      ctx.fillStyle = '#FFFF66';
+      ctx.fillRect(barX, timerY, barWidth * timeLeft, barHeight);
+
+      // Border
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, timerY, barWidth, barHeight);
+
+      // Label
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('Double Points', barX, timerY - 5);
     }
   }, []);
 
   const drawPowerUpMessages = useCallback((ctx: CanvasRenderingContext2D, gameState: GameState) => {
+    let messageY = 200;
+
     // Draw speed boost message
     if (gameState.showSpeedBoostMessage) {
       ctx.save();
       ctx.fillStyle = '#FFD700';
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 5;
 
       // Add animation
       const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
-      ctx.translate(400, 200);
+      ctx.translate(400, messageY);
       ctx.scale(scale, scale);
       ctx.fillText('⚡ SPEED UP! ⚡', 0, 0);
       ctx.restore();
+
+      messageY += 40;
     }
 
     // Draw auto collect message
     if (gameState.showAutoCollectMessage) {
       ctx.save();
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 5;
 
       // Rainbow text effect
       const text = '🌈 AUTO COLLECT! 🌈';
       const x = 400;
-      const y = 240;
 
       for (let i = 0; i < text.length; i++) {
         const hue = (Date.now() * 0.1 + i * 20) % 360;
         ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
         ctx.font = 'bold 24px Arial';
-        ctx.fillText(text[i], x - text.length * 7 + i * 14, y);
+        ctx.fillText(text[i], x - text.length * 7 + i * 14, messageY);
       }
 
       ctx.restore();
+      messageY += 40;
     }
 
     // Draw freeze message
@@ -605,17 +866,55 @@ export function useGameCanvas() {
       ctx.fillStyle = '#00BFFF';
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 5;
 
       // Add animation
       const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
-      ctx.translate(400, 280);
+      ctx.translate(400, messageY);
       ctx.scale(scale, scale);
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 2;
       ctx.strokeText('❄️ FROZEN! ❄️', 0, 0);
       ctx.fillText('❄️ FROZEN! ❄️', 0, 0);
+      ctx.restore();
+
+      messageY += 40;
+    }
+
+    // Draw reverse message
+    if (gameState.showReverseMessage) {
+      ctx.save();
+      ctx.fillStyle = '#800080';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+
+      // Add animation
+      const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
+      ctx.translate(400, messageY);
+      ctx.scale(scale, scale);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.strokeText('⇄ REVERSED! ⇄', 0, 0);
+      ctx.fillText('⇄ REVERSED! ⇄', 0, 0);
+      ctx.restore();
+
+      messageY += 40;
+    }
+
+    // Draw double points message
+    if (gameState.showDoublePointsMessage) {
+      ctx.save();
+      ctx.fillStyle = '#FFFF66';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+
+      // Add animation
+      const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
+      ctx.translate(400, messageY);
+      ctx.scale(scale, scale);
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeText('✨ DOUBLE POINTS! ✨', 0, 0);
+      ctx.fillText('✨ DOUBLE POINTS! ✨', 0, 0);
       ctx.restore();
     }
   }, []);
@@ -682,15 +981,12 @@ export function useGameCanvas() {
       for (let i = 0; i < RAINBOW_COLORS.length; i++) {
         ctx.strokeStyle = RAINBOW_COLORS[i].color;
         ctx.lineWidth = GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH;
-        ctx.shadowColor = RAINBOW_COLORS[i].color;
-        ctx.shadowBlur = gameState.isRainShower ? 2 : gameState.timeOfDay === 'night' ? 12 : 8;
         ctx.globalAlpha = gameState.isRainShower ? 0.2 : gameState.timeOfDay === 'night' ? 0.8 : 0.6;
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius + i * GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH, 0, Math.PI);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
 
       // Enhanced rain effect
       if (gameState.isRainShower) {
@@ -716,7 +1012,7 @@ export function useGameCanvas() {
       ctx: CanvasRenderingContext2D,
       gameState: GameState,
       cloud: Cloud,
-      colorDrops: Drop[],
+      drops: Drop[],
       updateAndDrawParticles: (ctx: CanvasRenderingContext2D) => void,
       updateAndDrawDamageTexts: (ctx: CanvasRenderingContext2D) => void,
       drawWeatherEffects: (ctx: CanvasRenderingContext2D, timeOfDay?: 'day' | 'night') => void,
@@ -728,7 +1024,7 @@ export function useGameCanvas() {
       drawBackground(ctx, gameState, drawWeatherEffects, drawStars, isLightningFlash);
 
       // Draw drops with target color highlighting
-      colorDrops.forEach((drop) => {
+      drops.forEach((drop) => {
         const isTargetColor = drop.type === 'normal' && drop.colorIndex === gameState.nextColorIndex;
         drawColorDrop(ctx, drop, isTargetColor);
       });
@@ -758,6 +1054,23 @@ export function useGameCanvas() {
         ctx.lineWidth = 2;
         ctx.strokeText('✨ AUTO COLLECT ACTIVE! ✨', 400, 300);
         ctx.fillText('✨ AUTO COLLECT ACTIVE! ✨', 400, 300);
+      }
+
+      // Enhanced double points effect
+      if (gameState.doublePointsEndTime > Date.now()) {
+        const gradient = ctx.createRadialGradient(400, 300, 0, 400, 300, 400);
+        gradient.addColorStop(0, 'rgba(255, 255, 102, 0.2)');
+        gradient.addColorStop(1, 'rgba(255, 255, 102, 0.05)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, GAME_CONSTANTS.CANVAS_WIDTH, GAME_CONSTANTS.CANVAS_HEIGHT);
+
+        ctx.fillStyle = '#FFFF66';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeText('✨ DOUBLE POINTS ACTIVE! ✨', 400, 350);
+        ctx.fillText('✨ DOUBLE POINTS ACTIVE! ✨', 400, 350);
       }
 
       // Draw pointer lock instructions if game is playing

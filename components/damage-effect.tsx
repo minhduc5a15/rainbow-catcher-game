@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 
 interface DamageText {
   x: number;
@@ -38,8 +38,7 @@ export function useDamageEffect() {
       }
 
       // Draw
-      const alpha = text.life / text.maxLife;
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = text.life / text.maxLife;
       ctx.fillStyle = '#FF0000';
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'center';

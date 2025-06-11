@@ -85,6 +85,18 @@ export default function GameRules() {
                   </span>
                 </p>
                 <p className="flex items-center gap-2">
+                  <span className="text-2xl">⇄</span>
+                  <span>
+                    <strong>Reverse Drop:</strong> Reverses cloud controls for 5 seconds
+                  </span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-2xl">✨</span>
+                  <span>
+                    <strong>Double Drop:</strong> Double points for 10 seconds
+                  </span>
+                </p>
+                <p className="flex items-center gap-2">
                   <span className="text-2xl">🎯</span>
                   <span>Target colors glow and pulse - easier to spot!</span>
                 </p>
@@ -212,6 +224,14 @@ export default function GameRules() {
               <p className="flex items-center gap-2">
                 <span className="text-xl">🏆</span>
                 <span>Aim for perfect rainbows for big scores</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">⇄</span>
+                <span>Adapt quickly to reversed controls</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">✨</span>
+                <span>Maximize scoring during double points</span>
               </p>
             </div>
           </CardContent>

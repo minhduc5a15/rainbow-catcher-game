@@ -22,6 +22,10 @@ export function useParticleSystem() {
         life: GAME_CONSTANTS.PARTICLE_LIFETIME,
         maxLife: GAME_CONSTANTS.PARTICLE_LIFETIME,
         gravity: 0.1,
+        // 3D effects
+        z: Math.random() * GAME_CONSTANTS.PARTICLE_Z_RANGE,
+        rotationSpeed: (Math.random() - 0.5) * 0.2,
+        rotation: Math.random() * Math.PI * 2,
       };
       particlesRef.current.push(particle);
     }
@@ -43,6 +47,10 @@ export function useParticleSystem() {
         life: GAME_CONSTANTS.PERFECT_PARTICLE_LIFETIME,
         maxLife: GAME_CONSTANTS.PERFECT_PARTICLE_LIFETIME,
         gravity: 0.05,
+        // 3D effects
+        z: Math.random() * GAME_CONSTANTS.PARTICLE_Z_RANGE,
+        rotationSpeed: (Math.random() - 0.5) * 0.3,
+        rotation: Math.random() * Math.PI * 2,
       };
       particlesRef.current.push(particle);
     }
@@ -63,6 +71,10 @@ export function useParticleSystem() {
         life: 60,
         maxLife: 60,
         gravity: 0.1,
+        // 3D effects
+        z: Math.random() * GAME_CONSTANTS.PARTICLE_Z_RANGE,
+        rotationSpeed: (Math.random() - 0.5) * 0.2,
+        rotation: Math.random() * Math.PI * 2,
       };
       particlesRef.current.push(particle);
     }
@@ -79,18 +91,39 @@ export function useParticleSystem() {
       p.speedY += p.gravity; // Apply gravity
       p.life--;
 
+      // Update 3D effects
+      if (p.rotation !== undefined && p.rotationSpeed !== undefined) {
+        p.rotation += p.rotationSpeed;
+      }
+
       // Remove dead particles
       if (p.life <= 0) {
         particles.splice(i, 1);
         continue;
       }
 
-      // Draw particle with fading effect
+      // Draw particle with 3D effects and fading
+      ctx.save();
+      ctx.translate(p.x, p.y);
+
+      // Apply 3D rotation
+      if (p.rotation !== undefined) {
+        ctx.rotate(p.rotation);
+      }
+
+      // Apply 3D scaling based on z-depth
+      if (p.z !== undefined) {
+        const scale = 0.5 + (p.z / GAME_CONSTANTS.PARTICLE_Z_RANGE) * 0.5;
+        ctx.scale(scale, scale);
+      }
+
       ctx.globalAlpha = p.life / p.maxLife;
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.arc(0, 0, p.size, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   }, []);

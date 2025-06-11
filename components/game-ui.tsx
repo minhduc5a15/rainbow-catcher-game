@@ -32,6 +32,8 @@ export function GameUI({ gameState, highScore, newGlobalRecord, onStartGame, onR
               <p>🌈 Rainbow drops auto-collect all colors</p>
               <p>❤️ Heart drops give extra lives</p>
               <p>❄️ Hail drops freeze the cloud</p>
+              <p>⇄ Purple drops reverse controls</p>
+              <p>✨ Yellow drops double points</p>
               <p>💀 Game over when you lose all 3 lives</p>
             </div>
           </div>
@@ -42,6 +44,7 @@ export function GameUI({ gameState, highScore, newGlobalRecord, onStartGame, onR
             <p>Use mouse to move the cloud</p>
             {gameState.isRainShower && <p className="text-blue-600 font-bold animate-pulse">🌧️ RAIN SHOWER - DOUBLE POINTS!</p>}
             {gameState.timeOfDay === 'night' && <p className="text-indigo-600 font-bold">🌙 Night Time - Stars are shining!</p>}
+            {gameState.doublePointsEndTime > Date.now() && <p className="text-yellow-600 font-bold animate-pulse">✨ DOUBLE POINTS ACTIVE!</p>}
           </div>
         )}
 

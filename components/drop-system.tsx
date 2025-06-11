@@ -10,10 +10,11 @@ export function useDropSystem() {
   const lastDropTimeRef = useRef(0);
   const dropIdCounter = useRef(0);
 
-  const createDrop = useCallback((gameSpeed: number, isRainShower = false): Drop => {
+  const createDrop = useCallback((gameSpeed: number, isRainShower = false, cloudX = 400): Drop => {
     const dropType = getRandomDropType();
     let color: string;
     let colorIndex: number;
+    let speedMultiplier = 1;
 
     switch (dropType) {
       case 'lightning':
@@ -23,6 +24,7 @@ export function useDropSystem() {
       case 'bomb':
         color = '#000000';
         colorIndex = -2;
+        speedMultiplier = GAME_CONSTANTS.BOMB_SPEED_MULTIPLIER;
         break;
       case 'rainbow':
         color = '#FFFFFF';
@@ -35,10 +37,26 @@ export function useDropSystem() {
       case 'hail':
         color = '#00BFFF';
         colorIndex = -5;
+        speedMultiplier = GAME_CONSTANTS.HAIL_SPEED_MULTIPLIER;
         break;
       case 'rocket':
         color = '#FF4500';
         colorIndex = -6;
+        speedMultiplier = GAME_CONSTANTS.ROCKET_SPEED_MULTIPLIER;
+        break;
+      case 'reverse':
+        color = '#800080';
+        colorIndex = -7;
+        speedMultiplier = GAME_CONSTANTS.REVERSE_SPEED_MULTIPLIER;
+        break;
+      case 'double':
+        color = '#FFFF66';
+        colorIndex = -8;
+        break;
+      case 'water':
+        color = '#00BFFF';
+        colorIndex = -9;
+        speedMultiplier = GAME_CONSTANTS.WATER_SPEED_MULTIPLIER;
         break;
       default:
         const randomColor = RAINBOW_COLORS[Math.floor(Math.random() * RAINBOW_COLORS.length)];
@@ -46,7 +64,7 @@ export function useDropSystem() {
         colorIndex = randomColor.index;
     }
 
-    const speed = (GAME_CONSTANTS.DROP_BASE_SPEED + gameSpeed * 0.5) * (isRainShower ? GAME_CONSTANTS.RAIN_SPEED_MULTIPLIER : 1);
+    const speed = (GAME_CONSTANTS.DROP_BASE_SPEED + gameSpeed * 0.5) * speedMultiplier * (isRainShower ? GAME_CONSTANTS.RAIN_SPEED_MULTIPLIER : 1);
 
     const drop: Drop = {
       x: Math.random() * (GAME_CONSTANTS.CANVAS_WIDTH - 40) + 20,
@@ -56,14 +74,20 @@ export function useDropSystem() {
       speed,
       type: dropType,
       id: `drop_${dropIdCounter.current++}`,
+      // 3D effects
+      scale: 0.8 + Math.random() * 0.4,
+      rotation: Math.random() * Math.PI * 2,
+      shadowOffset: Math.random() * GAME_CONSTANTS.SHADOW_OFFSET_MAX,
     };
 
-    // Add rocket-specific properties
+    // Add rocket-specific properties with cloud tracking
     if (dropType === 'rocket') {
-      drop.angle = Math.random() * Math.PI * 2; // Random angle for oscillation
-      drop.amplitude = 50 + Math.random() * 100; // Random amplitude for wave motion
-      drop.frequency = 0.02 + Math.random() * 0.03; // Random frequency
+      drop.angle = Math.random() * Math.PI * 2;
+      drop.amplitude = 30 + Math.random() * 50; // Reduced amplitude for better tracking
+      drop.frequency = 0.03 + Math.random() * 0.02;
       drop.startY = drop.y;
+      // Start rocket closer to cloud X position for better tracking
+      drop.x = cloudX + (Math.random() - 0.5) * 200;
     }
 
     return drop;
@@ -71,60 +95,131 @@ export function useDropSystem() {
 
   const getRandomDropType = useCallback((): Drop['type'] => {
     const rand = Math.random();
+    console.log('Random value:', rand); // Debug log
 
-    if (rand <= 0.01) {
-      return Math.random() < 0.5 ? 'rainbow' : 'heart';
+    // Check for special drops first (total ~21.2%)
+    let cumulativeProbability = 0;
+
+    // Ultra rare drops
+    cumulativeProbability += GAME_CONSTANTS.RAINBOW_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: rainbow');
+      return 'rainbow';
     }
 
-    if (rand <= GAME_CONSTANTS.LIGHTNING_DROP_CHANCE) {
-      return Math.random() < 0.5 ? 'lightning' : 'hail';
+    cumulativeProbability += GAME_CONSTANTS.HEART_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: heart');
+      return 'heart';
     }
 
-    if (rand <= GAME_CONSTANTS.BOMB_DROP_CHANCE) {
-      return Math.random() < 0.5 ? 'bomb' : 'rocket';
+    // Water drop
+    cumulativeProbability += GAME_CONSTANTS.WATER_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: water');
+      return 'water';
     }
 
+    // Double points
+    cumulativeProbability += GAME_CONSTANTS.DOUBLE_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: double');
+      return 'double';
+    }
+
+    // Power-up drops
+    cumulativeProbability += GAME_CONSTANTS.LIGHTNING_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: lightning');
+      return 'lightning';
+    }
+
+    cumulativeProbability += GAME_CONSTANTS.HAIL_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: hail');
+      return 'hail';
+    }
+
+    cumulativeProbability += GAME_CONSTANTS.REVERSE_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: reverse');
+      return 'reverse';
+    }
+
+    // Dangerous drops
+    cumulativeProbability += GAME_CONSTANTS.BOMB_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: bomb');
+      return 'bomb';
+    }
+
+    cumulativeProbability += GAME_CONSTANTS.ROCKET_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      console.log('Generated: rocket');
+      return 'rocket';
+    }
+
+    // Everything else is normal rainbow drops (~78.8%)
+    console.log('Generated: normal (default)');
     return 'normal';
   }, []);
 
   const spawnDrop = useCallback(
-    (gameSpeed: number, isRainShower = false) => {
-      const newDrop = createDrop(gameSpeed, isRainShower);
+    (gameSpeed: number, isRainShower = false, cloudX = 400) => {
+      const newDrop = createDrop(gameSpeed, isRainShower, cloudX);
       dropsRef.current.push(newDrop);
     },
     [createDrop],
   );
 
   const updateDrops = useCallback(
-    (gameSpeed: number, isRainShower = false) => {
+    (gameSpeed: number, isRainShower = false, cloudX = 400) => {
       const now = Date.now();
-      const spawnRate = isRainShower ? 200 : 1000 / gameSpeed;
+      // Faster spawn rate for more drops
+      const spawnRate = isRainShower ? 150 : Math.max(300, 800 / gameSpeed);
 
       if (now - lastDropTimeRef.current > spawnRate) {
-        spawnDrop(gameSpeed, isRainShower);
+        spawnDrop(gameSpeed, isRainShower, cloudX);
         lastDropTimeRef.current = now;
       }
 
       // Update drop movements
       dropsRef.current.forEach((drop) => {
+        // Update 3D effects
+        if (drop.rotation !== undefined) {
+          drop.rotation += GAME_CONSTANTS.DROP_ROTATION_SPEED;
+        }
+
         if (drop.type === 'rainbow') {
           // Rainbow drop complex pattern
           drop.x += Math.sin(drop.y * 0.01) * 2;
         } else if (drop.type === 'rocket') {
-          // Rocket complex movement pattern - FIXED to stay in bounds
+          // Enhanced rocket movement - always track towards cloud
           if (drop.angle !== undefined && drop.amplitude !== undefined && drop.frequency !== undefined && drop.startY !== undefined) {
             drop.angle += drop.frequency;
 
-            // Calculate base movement with reduced amplitude to stay in bounds
-            const centerX = GAME_CONSTANTS.CANVAS_WIDTH / 2;
-            const maxAmplitude = Math.min(drop.amplitude, GAME_CONSTANTS.CANVAS_WIDTH / 3);
-            const oscillation = Math.sin(drop.angle) * maxAmplitude;
+            // Calculate direction towards cloud
+            const targetX = cloudX;
+            const deltaX = targetX - drop.x;
+            const deltaY = GAME_CONSTANTS.CLOUD_Y_POSITION - drop.y;
+
+            // Normalize direction
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (distance > 0) {
+              const directionX = deltaX / distance;
+              const directionY = deltaY / distance;
+
+              // Move towards cloud with some oscillation
+              const oscillation = Math.sin(drop.angle) * (drop.amplitude * 0.3);
+              drop.x += directionX * drop.speed * 0.7 + oscillation * 0.3;
+              drop.y += Math.max(drop.speed * 0.8, directionY * drop.speed * 0.5);
+            } else {
+              // Fallback movement
+              drop.y += drop.speed;
+            }
 
             // Keep rocket within canvas bounds
-            drop.x = Math.max(20, Math.min(GAME_CONSTANTS.CANVAS_WIDTH - 20, centerX + oscillation));
-
-            // Add some vertical oscillation too but maintain downward movement
-            drop.y += drop.speed * (0.9 + 0.1 * Math.sin(drop.angle * 0.5));
+            drop.x = Math.max(20, Math.min(GAME_CONSTANTS.CANVAS_WIDTH - 20, drop.x));
           }
         }
       });

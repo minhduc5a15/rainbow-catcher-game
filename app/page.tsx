@@ -34,6 +34,8 @@ export default function RainbowCatcher() {
     autoCollectEndTime: 0,
     cloudSpeedBoostEndTime: 0,
     cloudFreezeEndTime: 0,
+    cloudReverseEndTime: 0,
+    doublePointsEndTime: 0,
     isRainShower: false,
     rainShowerEndTime: 0,
     nextRainShowerTime: 0,
@@ -49,7 +51,12 @@ export default function RainbowCatcher() {
     autoCollectMessageEndTime: 0,
     showFreezeMessage: false,
     freezeMessageEndTime: 0,
+    showReverseMessage: false,
+    reverseMessageEndTime: 0,
+    showDoublePointsMessage: false,
+    doublePointsMessageEndTime: 0,
     timeOfDay: 'day',
+    manualRainShowerOnly: true, // Disable automatic rain shower
   });
 
   const [highScore, setHighScore] = useState(0);
@@ -63,10 +70,15 @@ export default function RainbowCatcher() {
     height: 40,
     speedMultiplier: 1,
     isFrozen: false,
+    isReversed: false,
+    // 3D effects
+    scale: 1,
+    rotation: 0,
+    bobOffset: 0,
   });
 
   const { createCatchParticles, createPerfectRainbowEffect, createRainbowLostEffect, updateAndDrawParticles, clearParticles } = useParticleSystem();
-  const { dropsRef: colorDropsRef, updateDrops, clearDrops } = useDropSystem();
+  const { dropsRef, updateDrops, clearDrops } = useDropSystem();
   const { renderGame } = useGameCanvas();
   const { createDamageText, updateAndDrawDamageTexts, clearDamageTexts } = useDamageEffect();
   const {
@@ -117,7 +129,7 @@ export default function RainbowCatcher() {
   );
 
   const autoCollectColors = useCallback(() => {
-    const drops = colorDropsRef.current;
+    const drops = dropsRef.current;
     let collectedCount = 0;
 
     for (let i = drops.length - 1; i >= 0; i--) {
@@ -135,7 +147,8 @@ export default function RainbowCatcher() {
           }));
         }
 
-        const multiplier = gameState.isRainShower ? 2 : 1;
+        // Apply double points if active
+        const multiplier = (gameState.isRainShower ? 2 : 1) * (gameState.doublePointsEndTime > Date.now() ? 2 : 1);
         setGameState((prev) => ({ ...prev, score: prev.score + points * multiplier }));
 
         drops.splice(i, 1);
@@ -144,7 +157,7 @@ export default function RainbowCatcher() {
     }
 
     return collectedCount;
-  }, [createCatchParticles, gameState.nextColorIndex, gameState.isRainShower]);
+  }, [createCatchParticles, gameState.nextColorIndex, gameState.isRainShower, gameState.doublePointsEndTime]);
 
   const resetPerfectRainbow = useCallback((showMessage = true) => {
     setGameState((prev) => ({
@@ -172,6 +185,11 @@ export default function RainbowCatcher() {
       damageFlashRef.current--;
     }
 
+    // Update 3D cloud effects
+    const cloud = cloudRef.current;
+    cloud.bobOffset = Math.sin(now * GAME_CONSTANTS.CLOUD_BOB_FREQUENCY) * GAME_CONSTANTS.CLOUD_BOB_AMPLITUDE;
+    cloud.rotation = Math.sin(now * 0.001) * 0.05; // Subtle rotation
+
     // Update weather effects and stars
     updateWeatherEffects(gameState.isRainShower);
     if (gameState.timeOfDay === 'night') {
@@ -182,22 +200,33 @@ export default function RainbowCatcher() {
     setGameState((prev) => {
       const newState = { ...prev };
 
-      // Update cloud speed boost - FIXED: Only reset if time has expired AND currently boosted
+      // Update cloud speed boost
       if (now > prev.cloudSpeedBoostEndTime && prev.cloudSpeedBoostEndTime > 0) {
         if (cloudRef.current.speedMultiplier > 1) {
-          console.log('Resetting cloud speed multiplier');
           cloudRef.current.speedMultiplier = 1;
         }
-        newState.cloudSpeedBoostEndTime = 0; // Clear the end time
+        newState.cloudSpeedBoostEndTime = 0;
       }
 
-      // Update cloud freeze effect - FIXED: Only unfreeze if time has expired AND currently frozen
+      // Update cloud freeze effect
       if (now > prev.cloudFreezeEndTime && prev.cloudFreezeEndTime > 0) {
         if (cloudRef.current.isFrozen) {
-          console.log('Unfreezing cloud');
           cloudRef.current.isFrozen = false;
         }
-        newState.cloudFreezeEndTime = 0; // Clear the end time
+        newState.cloudFreezeEndTime = 0;
+      }
+
+      // Update cloud reverse effect
+      if (now > prev.cloudReverseEndTime && prev.cloudReverseEndTime > 0) {
+        if (cloudRef.current.isReversed) {
+          cloudRef.current.isReversed = false;
+        }
+        newState.cloudReverseEndTime = 0;
+      }
+
+      // Update double points
+      if (now > prev.doublePointsEndTime && prev.doublePointsEndTime > 0) {
+        newState.doublePointsEndTime = 0;
       }
 
       // Update auto-collect
@@ -205,13 +234,9 @@ export default function RainbowCatcher() {
         newState.isAutoCollecting = false;
       }
 
-      // Update rain shower
+      // Update rain shower (only manual now)
       if (prev.isRainShower && now > prev.rainShowerEndTime) {
         newState.isRainShower = false;
-        newState.nextRainShowerTime = now + GAME_CONSTANTS.RAIN_SHOWER_INTERVAL;
-      } else if (!prev.isRainShower && now > prev.nextRainShowerTime) {
-        newState.isRainShower = true;
-        newState.rainShowerEndTime = now + GAME_CONSTANTS.RAIN_SHOWER_DURATION;
       }
 
       // Update perfect rainbow lost message
@@ -232,7 +257,15 @@ export default function RainbowCatcher() {
         newState.showFreezeMessage = false;
       }
 
-      // Check for day/night cycle change - Updated for only 2 scenes
+      if (prev.showReverseMessage && now > prev.reverseMessageEndTime) {
+        newState.showReverseMessage = false;
+      }
+
+      if (prev.showDoublePointsMessage && now > prev.doublePointsMessageEndTime) {
+        newState.showDoublePointsMessage = false;
+      }
+
+      // Check for day/night cycle change
       const currentCycle = Math.floor(prev.perfectRainbowCount / GAME_CONSTANTS.PERFECT_RAINBOWS_FOR_SCENE_CHANGE);
       const sceneIndex = currentCycle % 2;
       let newTimeOfDay: 'day' | 'night';
@@ -260,20 +293,24 @@ export default function RainbowCatcher() {
       autoCollectColors();
     }
 
-    // Update cloud position with improved mouse control
-    const cloud = cloudRef.current;
+    // Update cloud position with improved mouse control and reverse effect
     if (mouseXRef.current > 0 && !cloud.isFrozen) {
       const targetX = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, mouseXRef.current));
       const diff = targetX - cloud.x;
+
+      // Don't apply reverse here since it's already handled in handleMouseMove
       const responsiveness = gameState.isPointerLocked ? GAME_CONSTANTS.MOUSE_RESPONSIVENESS_LOCKED : GAME_CONSTANTS.MOUSE_RESPONSIVENESS;
       cloud.x += diff * responsiveness * cloud.speedMultiplier;
+
+      // Keep cloud within bounds
+      cloud.x = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, cloud.x));
     }
 
-    // Update drops
-    updateDrops(gameState.gameSpeed, gameState.isRainShower);
+    // Update drops with cloud position for rocket tracking
+    updateDrops(gameState.gameSpeed, gameState.isRainShower, cloud.x);
 
     // Handle collisions and drop removal
-    const drops = colorDropsRef.current;
+    const drops = dropsRef.current;
     for (let i = drops.length - 1; i >= 0; i--) {
       const drop = drops[i];
       drop.y += drop.speed;
@@ -346,25 +383,56 @@ export default function RainbowCatcher() {
           }
           return { ...prev, lives: newLives };
         });
+      } else if (drop.type === 'water') {
+        // Water drop: instantly trigger rain shower
+        setGameState((prev) => ({
+          ...prev,
+          isRainShower: true,
+          rainShowerEndTime: now + GAME_CONSTANTS.RAIN_SHOWER_DURATION,
+          score: prev.score + 30, // Bonus points for water drop
+        }));
       } else if (drop.type === 'hail') {
         // Hail: freeze cloud immediately
         cloudRef.current.isFrozen = true;
-        cloudRef.current.speedMultiplier = 1; // Reset any speed boost
+        cloudRef.current.speedMultiplier = 1;
+        cloudRef.current.isReversed = false;
         setGameState((prev) => ({
           ...prev,
           cloudFreezeEndTime: now + GAME_CONSTANTS.FREEZE_DURATION,
-          cloudSpeedBoostEndTime: 0, // Clear any speed boost
+          cloudSpeedBoostEndTime: 0,
+          cloudReverseEndTime: 0,
           showFreezeMessage: true,
           freezeMessageEndTime: now + 1500,
+        }));
+      } else if (drop.type === 'reverse') {
+        // Reverse: reverse cloud controls
+        cloudRef.current.isReversed = true;
+        cloudRef.current.isFrozen = false;
+        setGameState((prev) => ({
+          ...prev,
+          cloudReverseEndTime: now + GAME_CONSTANTS.REVERSE_DURATION,
+          cloudFreezeEndTime: 0,
+          showReverseMessage: true,
+          reverseMessageEndTime: now + 1500,
+        }));
+      } else if (drop.type === 'double') {
+        // Double: double points for a duration
+        setGameState((prev) => ({
+          ...prev,
+          doublePointsEndTime: now + GAME_CONSTANTS.DOUBLE_POINTS_DURATION,
+          showDoublePointsMessage: true,
+          doublePointsMessageEndTime: now + 1500,
         }));
       } else if (drop.type === 'lightning') {
         // Lightning drop: speed boost
         cloudRef.current.speedMultiplier = GAME_CONSTANTS.CLOUD_SPEED_BOOST_MULTIPLIER;
-        cloudRef.current.isFrozen = false; // Clear any freeze effect
+        cloudRef.current.isFrozen = false;
+        cloudRef.current.isReversed = false;
         setGameState((prev) => ({
           ...prev,
           cloudSpeedBoostEndTime: now + GAME_CONSTANTS.SPEED_BOOST_DURATION,
-          cloudFreezeEndTime: 0, // Clear any freeze effect
+          cloudFreezeEndTime: 0,
+          cloudReverseEndTime: 0,
           showSpeedBoostMessage: true,
           speedBoostMessageEndTime: now + 1500,
         }));
@@ -414,7 +482,8 @@ export default function RainbowCatcher() {
           }));
         }
 
-        const multiplier = gameState.isRainShower ? 2 : 1;
+        // Apply double points if active
+        const multiplier = (gameState.isRainShower ? 2 : 1) * (gameState.doublePointsEndTime > now ? 2 : 1);
         setGameState((prev) => ({ ...prev, score: prev.score + points * multiplier }));
       }
     },
@@ -427,6 +496,7 @@ export default function RainbowCatcher() {
       gameState.nextColorIndex,
       gameState.perfectRainbowProgress,
       gameState.isRainShower,
+      gameState.doublePointsEndTime,
       saveHighScore,
     ],
   );
@@ -445,9 +515,11 @@ export default function RainbowCatcher() {
       autoCollectEndTime: 0,
       cloudSpeedBoostEndTime: 0,
       cloudFreezeEndTime: 0,
+      cloudReverseEndTime: 0,
+      doublePointsEndTime: 0,
       isRainShower: false,
       rainShowerEndTime: 0,
-      nextRainShowerTime: now + GAME_CONSTANTS.RAIN_SHOWER_INTERVAL,
+      nextRainShowerTime: 0, // No automatic rain shower
       perfectRainbowProgress: 0,
       showPerfectRainbowLost: false,
       perfectRainbowLostTime: 0,
@@ -460,7 +532,12 @@ export default function RainbowCatcher() {
       autoCollectMessageEndTime: 0,
       showFreezeMessage: false,
       freezeMessageEndTime: 0,
+      showReverseMessage: false,
+      reverseMessageEndTime: 0,
+      showDoublePointsMessage: false,
+      doublePointsMessageEndTime: 0,
       timeOfDay: 'day',
+      manualRainShowerOnly: true,
     });
     clearDrops();
     clearParticles();
@@ -475,6 +552,10 @@ export default function RainbowCatcher() {
       height: 40,
       speedMultiplier: 1,
       isFrozen: false,
+      isReversed: false,
+      scale: 1,
+      rotation: 0,
+      bobOffset: 0,
     };
     loadHighScore();
     setShowGameOverDialog(false);
@@ -516,14 +597,30 @@ export default function RainbowCatcher() {
     (e: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
       if (gameState.isPointerLocked) {
         // Use movement for locked pointer
-        mouseXRef.current = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, cloudRef.current.x + e.movementX));
+        let movementX = e.movementX;
+
+        // Apply reverse effect to movement
+        if (cloudRef.current.isReversed) {
+          movementX = -movementX;
+        }
+
+        mouseXRef.current = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, cloudRef.current.x + movementX));
       } else {
         // Use absolute position for unlocked pointer
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        mouseXRef.current = e.clientX - rect.left;
+        let targetX = e.clientX - rect.left;
+
+        // Apply reverse effect to absolute positioning
+        if (cloudRef.current.isReversed) {
+          // Reverse the target position relative to canvas center
+          const canvasCenter = GAME_CONSTANTS.CANVAS_WIDTH / 2;
+          targetX = canvasCenter - (targetX - canvasCenter);
+        }
+
+        mouseXRef.current = targetX;
       }
     },
     [gameState.isPointerLocked],
@@ -631,6 +728,7 @@ export default function RainbowCatcher() {
       <div className="mt-4 text-center text-white/90 text-sm bg-black/20 rounded-lg p-3">
         <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
         <p>⚡ Golden = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
+        <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm</p>
         <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock)</p>
       </div>
 

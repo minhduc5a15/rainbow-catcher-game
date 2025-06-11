@@ -4,13 +4,17 @@ export interface Drop {
   color: string;
   colorIndex: number;
   speed: number;
-  type: 'normal' | 'lightning' | 'bomb' | 'rainbow' | 'heart' | 'hail' | 'rocket';
+  type: 'normal' | 'lightning' | 'bomb' | 'rainbow' | 'heart' | 'hail' | 'rocket' | 'reverse' | 'double' | 'water';
   id: string;
   // Rocket-specific properties
   angle?: number;
   amplitude?: number;
   frequency?: number;
   startY?: number;
+  // 3D effect properties
+  scale?: number;
+  rotation?: number;
+  shadowOffset?: number;
 }
 
 export interface Cloud {
@@ -20,6 +24,11 @@ export interface Cloud {
   height: number;
   speedMultiplier: number;
   isFrozen: boolean;
+  isReversed: boolean;
+  // 3D effect properties
+  scale: number;
+  rotation: number;
+  bobOffset: number;
 }
 
 export interface Particle {
@@ -32,6 +41,10 @@ export interface Particle {
   life: number;
   maxLife: number;
   gravity: number;
+  // 3D effect properties
+  z?: number;
+  rotationSpeed?: number;
+  rotation?: number;
 }
 
 export interface GameState {
@@ -46,6 +59,8 @@ export interface GameState {
   autoCollectEndTime: number;
   cloudSpeedBoostEndTime: number;
   cloudFreezeEndTime: number;
+  cloudReverseEndTime: number;
+  doublePointsEndTime: number;
   isRainShower: boolean;
   rainShowerEndTime: number;
   nextRainShowerTime: number;
@@ -61,7 +76,13 @@ export interface GameState {
   autoCollectMessageEndTime: number;
   showFreezeMessage: boolean;
   freezeMessageEndTime: number;
+  showReverseMessage: boolean;
+  reverseMessageEndTime: number;
+  showDoublePointsMessage: boolean;
+  doublePointsMessageEndTime: number;
   timeOfDay: 'day' | 'night';
+  // Remove automatic rain shower system
+  manualRainShowerOnly: boolean;
 }
 
 export interface PowerUp {
@@ -75,6 +96,9 @@ export interface BackgroundCloud {
   size: number;
   speed: number;
   opacity: number;
+  // 3D effect properties
+  scale?: number;
+  rotation?: number;
 }
 
 export interface Star {
@@ -83,6 +107,9 @@ export interface Star {
   size: number;
   twinkle: number;
   brightness: number;
+  // 3D effect properties
+  z: number;
+  rotationSpeed: number;
 }
 
 export const RAINBOW_COLORS = [
