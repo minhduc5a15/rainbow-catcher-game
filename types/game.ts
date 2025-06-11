@@ -4,7 +4,7 @@ export interface Drop {
   color: string;
   colorIndex: number;
   speed: number;
-  type: 'normal' | 'lightning' | 'bomb' | 'rainbow' | 'heart' | 'hail' | 'rocket' | 'reverse' | 'double' | 'water';
+  type: 'normal' | 'lightning' | 'bomb' | 'rainbow' | 'heart' | 'hail' | 'rocket' | 'reverse' | 'double' | 'water' | 'shield';
   id: string;
   // Rocket-specific properties
   angle?: number;
@@ -25,6 +25,8 @@ export interface Cloud {
   speedMultiplier: number;
   isFrozen: boolean;
   isReversed: boolean;
+  isInvincible: boolean; // New: invincibility frames after damage
+  isShielded: boolean; // New: shield protection
   // 3D effect properties
   scale: number;
   rotation: number;
@@ -60,6 +62,8 @@ export interface GameState {
   cloudSpeedBoostEndTime: number;
   cloudFreezeEndTime: number;
   cloudReverseEndTime: number;
+  cloudInvincibilityEndTime: number; // New: invincibility timer
+  cloudShieldEndTime: number; // New: shield timer
   doublePointsEndTime: number;
   isRainShower: boolean;
   rainShowerEndTime: number;
@@ -80,6 +84,8 @@ export interface GameState {
   reverseMessageEndTime: number;
   showDoublePointsMessage: boolean;
   doublePointsMessageEndTime: number;
+  showShieldMessage: boolean; // New: shield message
+  shieldMessageEndTime: number; // New: shield message timer
   timeOfDay: 'day' | 'night';
   // Remove automatic rain shower system
   manualRainShowerOnly: boolean;

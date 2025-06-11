@@ -11,6 +11,8 @@ export const GAME_CONSTANTS = {
   FREEZE_DURATION: 3000,
   REVERSE_DURATION: 5000,
   DOUBLE_POINTS_DURATION: 10000,
+  INVINCIBILITY_DURATION: 3000, // New: 3 seconds invincibility after damage
+  SHIELD_DURATION: 6000, // New: 6 seconds shield protection
 
   // Scoring constants
   NORMAL_DROP_POINTS: 10,
@@ -26,19 +28,20 @@ export const GAME_CONSTANTS = {
   MOUSE_RESPONSIVENESS_LOCKED: 0.8,
 
   // Drop spawn rates (percentages) - SPECIAL DROPS ONLY - Balanced
-  RAINBOW_DROP_CHANCE: 0.004, // Slightly increased from original 0.003 (0.4%)
-  HEART_DROP_CHANCE: 0.004, // Slightly increased from original 0.003 (0.4%)
-  WATER_DROP_CHANCE: 0.012, // Slightly increased from original 0.01 (1.2%)
+  RAINBOW_DROP_CHANCE: 0.004, // 0.4%
+  HEART_DROP_CHANCE: 0.004, // 0.4%
+  SHIELD_DROP_CHANCE: 0.025, // New: 2.5% (between heart and lightning)
+  WATER_DROP_CHANCE: 0.012, // 1.2%
 
-  LIGHTNING_DROP_CHANCE: 0.05, // Slightly increased from original 0.04 (5%)
-  HAIL_DROP_CHANCE: 0.05, // Slightly increased from original 0.04 (5%)
-  REVERSE_DROP_CHANCE: 0.05, // Slightly increased from original 0.04 (5%)
-  DOUBLE_DROP_CHANCE: 0.035, // Slightly increased from original 0.03 (3.5%)
+  LIGHTNING_DROP_CHANCE: 0.05, // 5%
+  HAIL_DROP_CHANCE: 0.05, // 5%
+  REVERSE_DROP_CHANCE: 0.05, // 5%
+  DOUBLE_DROP_CHANCE: 0.035, // 3.5%
 
-  BOMB_DROP_CHANCE: 0.07, // Slightly increased from original 0.06 (7%)
-  ROCKET_DROP_CHANCE: 0.07, // Slightly increased from original 0.06 (7%)
+  BOMB_DROP_CHANCE: 0.07, // 7%
+  ROCKET_DROP_CHANCE: 0.07, // 7%
 
-  // Total special drops: ~24.8%, Normal drops: ~75.2%
+  // Total special drops: ~27.3%, Normal drops: ~72.7%
 
   // Drop speed multipliers
   BOMB_SPEED_MULTIPLIER: 1.8,
@@ -47,23 +50,30 @@ export const GAME_CONSTANTS = {
   ROCKET_SPEED_MULTIPLIER: 1.2,
   WATER_SPEED_MULTIPLIER: 1.2,
 
+  // Rocket tracking improvements
+  ROCKET_X_SPEED_FACTOR: 0.4, // Slower horizontal movement
+  ROCKET_Y_SPEED_FACTOR: 0.6, // Slower vertical movement
+  ROCKET_TRACKING_STRENGTH: 0.8, // How strongly rocket tracks cloud
+
   // Drop spawn timing - Moderate increase
-  DROP_SPAWN_RATE_BASE: 250, // Reduced from 300 but not as aggressive as 200
-  DROP_SPAWN_RATE_RAIN: 120, // Faster during rain but not too fast
-  DROP_SPAWN_RATE_FOCUS: 200, // Faster in focus mode
-  DROP_SPAWN_RATE_FOCUS_RAIN: 90, // Faster in focus mode during rain
+  DROP_SPAWN_RATE_BASE: 250,
+  DROP_SPAWN_RATE_RAIN: 120,
+  DROP_SPAWN_RATE_FOCUS: 200,
+  DROP_SPAWN_RATE_FOCUS_RAIN: 90,
 
   // Multiple drops per spawn - More conservative
   DROPS_PER_SPAWN_NORMAL: 1,
-  DROPS_PER_SPAWN_RAIN: 1, // Keep single drop during rain in normal mode
-  DROPS_PER_SPAWN_FOCUS: 2, // 2 drops in focus mode (larger screen)
-  DROPS_PER_SPAWN_FOCUS_RAIN: 2, // 2 drops in focus mode during rain
+  DROPS_PER_SPAWN_RAIN: 1,
+  DROPS_PER_SPAWN_FOCUS: 2,
+  DROPS_PER_SPAWN_FOCUS_RAIN: 2,
 
   // Visual effects
   PARTICLE_COUNT_NORMAL: 10,
   PARTICLE_COUNT_PERFECT: 30,
   PARTICLE_LIFETIME: 50,
   PERFECT_PARTICLE_LIFETIME: 60,
+  INVINCIBILITY_BLINK_SPEED: 1, // How fast cloud blinks during invincibility
+  SHIELD_PULSE_SPEED: 0.05, // How fast shield pulses
 
   // Canvas dimensions - Normal mode
   CANVAS_WIDTH: 800,

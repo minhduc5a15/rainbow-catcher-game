@@ -24,6 +24,8 @@ interface GameStore extends GameState {
   setCloudSpeedBoostEndTime: (time: number) => void;
   setCloudFreezeEndTime: (time: number) => void;
   setCloudReverseEndTime: (time: number) => void;
+  setCloudInvincibilityEndTime: (time: number) => void; // New
+  setCloudShieldEndTime: (time: number) => void; // New
   setDoublePointsEndTime: (time: number) => void;
   setShowPerfectRainbowLost: (show: boolean) => void;
   setPerfectRainbowLostTime: (time: number) => void;
@@ -38,6 +40,8 @@ interface GameStore extends GameState {
   setReverseMessageEndTime: (time: number) => void;
   setShowDoublePointsMessage: (show: boolean) => void;
   setDoublePointsMessageEndTime: (time: number) => void;
+  setShowShieldMessage: (show: boolean) => void; // New
+  setShieldMessageEndTime: (time: number) => void; // New
   setTimeOfDay: (timeOfDay: 'day' | 'night') => void;
   setFocusMode: (focusMode: boolean) => void;
   updateGameState: (updates: Partial<GameState>) => void;
@@ -56,6 +60,8 @@ const initialGameState: GameState = {
   cloudSpeedBoostEndTime: 0,
   cloudFreezeEndTime: 0,
   cloudReverseEndTime: 0,
+  cloudInvincibilityEndTime: 0, // New
+  cloudShieldEndTime: 0, // New
   doublePointsEndTime: 0,
   isRainShower: false,
   rainShowerEndTime: 0,
@@ -76,6 +82,8 @@ const initialGameState: GameState = {
   reverseMessageEndTime: 0,
   showDoublePointsMessage: false,
   doublePointsMessageEndTime: 0,
+  showShieldMessage: false, // New
+  shieldMessageEndTime: 0, // New
   timeOfDay: 'day',
   manualRainShowerOnly: true,
   isPaused: false,
@@ -101,6 +109,8 @@ export const useGameStore = create<GameStore>((set) => ({
       cloudSpeedBoostEndTime: 0,
       cloudFreezeEndTime: 0,
       cloudReverseEndTime: 0,
+      cloudInvincibilityEndTime: 0, // New
+      cloudShieldEndTime: 0, // New
       doublePointsEndTime: 0,
       isRainShower: false,
       rainShowerEndTime: 0,
@@ -121,6 +131,8 @@ export const useGameStore = create<GameStore>((set) => ({
       reverseMessageEndTime: 0,
       showDoublePointsMessage: false,
       doublePointsMessageEndTime: 0,
+      showShieldMessage: false, // New
+      shieldMessageEndTime: 0, // New
       timeOfDay: 'day',
       manualRainShowerOnly: true,
       isPaused: false,
@@ -159,6 +171,10 @@ export const useGameStore = create<GameStore>((set) => ({
 
   setCloudReverseEndTime: (cloudReverseEndTime) => set({ cloudReverseEndTime }),
 
+  setCloudInvincibilityEndTime: (cloudInvincibilityEndTime) => set({ cloudInvincibilityEndTime }), // New
+
+  setCloudShieldEndTime: (cloudShieldEndTime) => set({ cloudShieldEndTime }), // New
+
   setDoublePointsEndTime: (doublePointsEndTime) => set({ doublePointsEndTime }),
 
   setShowPerfectRainbowLost: (showPerfectRainbowLost) => set({ showPerfectRainbowLost }),
@@ -186,6 +202,10 @@ export const useGameStore = create<GameStore>((set) => ({
   setShowDoublePointsMessage: (showDoublePointsMessage) => set({ showDoublePointsMessage }),
 
   setDoublePointsMessageEndTime: (doublePointsMessageEndTime) => set({ doublePointsMessageEndTime }),
+
+  setShowShieldMessage: (showShieldMessage) => set({ showShieldMessage }), // New
+
+  setShieldMessageEndTime: (shieldMessageEndTime) => set({ shieldMessageEndTime }), // New
 
   setTimeOfDay: (timeOfDay) => set({ timeOfDay }),
 

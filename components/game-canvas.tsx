@@ -15,6 +15,7 @@ import {
   drawRocketDrop,
   drawReverseDrop,
   drawDoublePointsDrop,
+  drawShieldDrop,
   drawNormalDrop,
   drawCloud,
 } from './draw-utils';
@@ -109,6 +110,9 @@ export function useGameCanvas() {
         break;
       case 'double':
         drawDoublePointsDrop(ctx);
+        break;
+      case 'shield':
+        drawShieldDrop(ctx);
         break;
       default:
         drawNormalDrop(ctx, drop.color);
@@ -375,6 +379,65 @@ export function useGameCanvas() {
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'left';
       ctx.fillText('Double Points', barX, timerY - 5);
+
+      timerY += 30;
+    }
+
+    // Draw shield timer if active
+    if (gameState.cloudShieldEndTime > now) {
+      const timeLeft = (gameState.cloudShieldEndTime - now) / GAME_CONSTANTS.SHIELD_DURATION;
+      const barWidth = 150;
+      const barHeight = 10;
+      const barX = 20;
+
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(barX, timerY, barWidth, barHeight);
+
+      // Progress with green color
+      ctx.fillStyle = '#32CD32';
+      ctx.fillRect(barX, timerY, barWidth * timeLeft, barHeight);
+
+      // Border
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, timerY, barWidth, barHeight);
+
+      // Label
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('Shield Active', barX, timerY - 5);
+
+      timerY += 30;
+    }
+
+    // Draw invincibility timer if active
+    if (gameState.cloudInvincibilityEndTime > now) {
+      const timeLeft = (gameState.cloudInvincibilityEndTime - now) / GAME_CONSTANTS.INVINCIBILITY_DURATION;
+      const barWidth = 150;
+      const barHeight = 10;
+      const barX = 20;
+
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(barX, timerY, barWidth, barHeight);
+
+      // Progress with flashing color
+      const flashAlpha = 0.5 + 0.5 * Math.abs(Math.sin(Date.now() * 0.01));
+      ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+      ctx.fillRect(barX, timerY, barWidth * timeLeft, barHeight);
+
+      // Border
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, timerY, barWidth, barHeight);
+
+      // Label
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('Invincible', barX, timerY - 5);
     }
   }, []);
 
@@ -474,6 +537,26 @@ export function useGameCanvas() {
       ctx.lineWidth = 2;
       ctx.strokeText('✨ DOUBLE POINTS! ✨', 0, 0);
       ctx.fillText('✨ DOUBLE POINTS! ✨', 0, 0);
+      ctx.restore();
+
+      messageY += 40;
+    }
+
+    // Draw shield message
+    if (gameState.showShieldMessage) {
+      ctx.save();
+      ctx.fillStyle = '#32CD32';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+
+      // Add animation
+      const scale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
+      ctx.translate(centerX, messageY);
+      ctx.scale(scale, scale);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.strokeText('🛡️ SHIELD ACTIVE! 🛡️', 0, 0);
+      ctx.fillText('🛡️ SHIELD ACTIVE! 🛡️', 0, 0);
       ctx.restore();
     }
   }, []);

@@ -2,7 +2,6 @@
 
 import type React from 'react';
 import { useEffect, useRef, useCallback } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { Cloud, Drop } from '@/types/game';
@@ -11,12 +10,12 @@ import { useDropSystem } from '@/components/drop-system';
 import { useGameCanvas } from '@/components/game-canvas';
 import { useDamageEffect } from '@/components/damage-effect';
 import { useWeatherEffects } from '@/components/weather-effects';
-import { GameUI, GameStats } from '@/components/game-ui';
-import { GlobalHighScoreDisplay } from '@/components/global-high-score';
+import { GameUI } from '@/components/game-ui';
 import { PauseMenu } from '@/components/pause-menu';
 import { updateGlobalHighScore } from '@/lib/firebase';
 import { useGameStore } from '@/store/game-store';
 import { GAME_CONSTANTS } from '@/constants/game';
+import { GlobalHighScoreDisplay } from '@/components/global-high-score';
 
 export default function RainbowCatcher() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -55,6 +54,8 @@ export default function RainbowCatcher() {
     speedMultiplier: 1,
     isFrozen: false,
     isReversed: false,
+    isInvincible: false,
+    isShielded: false,
     scale: 1,
     rotation: 0,
     bobOffset: 0,
@@ -231,6 +232,22 @@ export default function RainbowCatcher() {
       updates.cloudReverseEndTime = 0;
     }
 
+    // Update invincibility
+    if (now > gameState.cloudInvincibilityEndTime && gameState.cloudInvincibilityEndTime > 0) {
+      if (cloudRef.current.isInvincible) {
+        cloudRef.current.isInvincible = false;
+      }
+      updates.cloudInvincibilityEndTime = 0;
+    }
+
+    // Update shield
+    if (now > gameState.cloudShieldEndTime && gameState.cloudShieldEndTime > 0) {
+      if (cloudRef.current.isShielded) {
+        cloudRef.current.isShielded = false;
+      }
+      updates.cloudShieldEndTime = 0;
+    }
+
     // Update double points
     if (now > gameState.doublePointsEndTime && gameState.doublePointsEndTime > 0) {
       updates.doublePointsEndTime = 0;
@@ -270,6 +287,10 @@ export default function RainbowCatcher() {
 
     if (gameState.showDoublePointsMessage && now > gameState.doublePointsMessageEndTime) {
       updates.showDoublePointsMessage = false;
+    }
+
+    if (gameState.showShieldMessage && now > gameState.shieldMessageEndTime) {
+      updates.showShieldMessage = false;
     }
 
     // Check for day/night cycle change
@@ -377,11 +398,27 @@ export default function RainbowCatcher() {
       createCatchParticles(drop.x, drop.y, drop.color);
 
       if (drop.type === 'bomb' || drop.type === 'rocket') {
-        // Black bomb or rocket: lose life with damage effect and reset perfect rainbow
+        // Check if cloud is protected
+        if (cloudRef.current.isShielded) {
+          // Shield blocks damage and creates explosion effect
+          createPerfectRainbowEffect(drop.x, drop.y); // Explosion effect
+          gameState.setScore(gameState.score + 25); // Bonus points for blocking
+          return;
+        }
+
+        if (cloudRef.current.isInvincible) {
+          // Invincibility frames - no damage taken
+          return;
+        }
+
+        // Take damage: lose life, activate invincibility frames, reset perfect rainbow
         damageFlashRef.current = GAME_CONSTANTS.DAMAGE_FLASH_DURATION;
         createDamageText(cloudRef.current.x, cloudRef.current.y - 30);
         createRainbowLostEffect(cloudRef.current.x, cloudRef.current.y);
         resetPerfectRainbow(true);
+
+        // Activate invincibility frames
+        cloudRef.current.isInvincible = true;
 
         const newLives = gameState.lives - 1;
         if (newLives <= 0) {
@@ -393,8 +430,24 @@ export default function RainbowCatcher() {
           }
           gameState.updateGameState({ lives: 0, state: 'gameOver' });
         } else {
-          gameState.setLives(newLives);
+          gameState.updateGameState({
+            lives: newLives,
+            cloudInvincibilityEndTime: now + GAME_CONSTANTS.INVINCIBILITY_DURATION,
+          });
         }
+      } else if (drop.type === 'shield') {
+        // Shield drop: activate shield protection
+        cloudRef.current.isShielded = true;
+        cloudRef.current.isFrozen = false;
+        cloudRef.current.isReversed = false;
+        gameState.updateGameState({
+          cloudShieldEndTime: now + GAME_CONSTANTS.SHIELD_DURATION,
+          cloudFreezeEndTime: 0,
+          cloudReverseEndTime: 0,
+          score: gameState.score + 30,
+          showShieldMessage: true,
+          shieldMessageEndTime: now + 1500,
+        });
       } else if (drop.type === 'water') {
         // Water drop: instantly trigger rain shower
         gameState.updateGameState({
@@ -512,6 +565,8 @@ export default function RainbowCatcher() {
       speedMultiplier: 1,
       isFrozen: false,
       isReversed: false,
+      isInvincible: false,
+      isShielded: false,
       scale: 1,
       rotation: 0,
       bobOffset: 0,
@@ -777,8 +832,29 @@ export default function RainbowCatcher() {
         </div>
       </div>
 
-      <Card className="p-6 bg-gradient-to-br from-white/95 to-purple-100/95 backdrop-blur-sm border-4 border-purple-300 shadow-2xl relative">
-        <GameStats gameState={gameState} />
+      <div className="p-6 bg-gradient-to-br from-white/95 to-purple-100/95 backdrop-blur-sm border-4 border-purple-300 shadow-2xl relative rounded-lg">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2 bg-gradient-to-r from-purple-100 to-pink-100 p-3 rounded-lg border-2 border-purple-200">
+          <div className="text-lg font-bold bg-blue-100 px-3 py-1 rounded-full">
+            Score: <span className="text-blue-600">{gameState.score}</span>
+          </div>
+          <div className="text-lg font-bold bg-red-100 px-3 py-1 rounded-full">
+            Lives: <span className="text-red-600">{'❤️'.repeat(gameState.lives)}</span>
+          </div>
+          <div className="text-sm bg-white px-3 py-1 rounded-full">
+            Next Color:{' '}
+            <span className="px-2 py-1 rounded text-white font-bold ml-1" style={{ backgroundColor: gameState.nextColorIndex < 7 ? '#FF0000' : '#FF0000' }}>
+              Next
+            </span>
+          </div>
+          <div className="text-sm bg-purple-100 px-3 py-1 rounded-full">
+            Perfect: <span className="text-purple-600 font-bold">{gameState.perfectRainbowCount}</span> 🌈
+          </div>
+          {gameState.timeOfDay === 'night' && (
+            <div className="text-sm bg-indigo-100 px-3 py-1 rounded-full">
+              <span className="text-indigo-600 font-bold">🌙 Night</span>
+            </div>
+          )}
+        </div>
 
         <div className="relative">
           <canvas
@@ -804,12 +880,12 @@ export default function RainbowCatcher() {
           showGameOverDialog={showGameOverDialogRef.current}
           onCloseGameOverDialog={() => (showGameOverDialogRef.current = false)}
         />
-      </Card>
+      </div>
 
       <div className="mt-4 text-center text-white/90 text-sm bg-black/20 rounded-lg p-3">
         <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
         <p>⚡ Golden = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
-        <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm</p>
+        <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm | 🛡️ Shield = Protection</p>
         <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock) | ⏸️ Press Space to pause | 🎯 Press F11 for Focus Mode</p>
       </div>
 

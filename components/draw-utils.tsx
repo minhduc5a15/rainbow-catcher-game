@@ -1,6 +1,44 @@
 import { GAME_CONSTANTS } from '@/constants/game';
 import type { Drop } from '@/types/game';
 
+// Draw shield drop
+export function drawShieldDrop(ctx: CanvasRenderingContext2D) {
+  // Shield drop with protective aura
+  const shieldPulse = 1 + Math.sin(Date.now() * GAME_CONSTANTS.SHIELD_PULSE_SPEED) * 0.15;
+
+  // Main shield body with green color
+  const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS);
+  gradient.addColorStop(0, '#90EE90');
+  gradient.addColorStop(1, '#228B22');
+
+  ctx.fillStyle = gradient;
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.arc(0, 0, GAME_CONSTANTS.SPECIAL_DROP_RADIUS * shieldPulse, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Add protective aura
+  ctx.strokeStyle = '#90EE90';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+  ctx.arc(0, 0, (GAME_CONSTANTS.SPECIAL_DROP_RADIUS + 5) * shieldPulse, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Shield symbol
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 16px Arial';
+  ctx.textAlign = 'center';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1;
+  ctx.strokeText('🛡️', 0, 4);
+  ctx.fillText('🛡️', 0, 4);
+}
+
 // Draw water drop
 export function drawWaterDrop(ctx: CanvasRenderingContext2D) {
   // Water drop with realistic water effect
@@ -322,7 +360,7 @@ export function drawNormalDrop(ctx: CanvasRenderingContext2D, color: string) {
   ctx.fill();
 }
 
-// Draw cloud
+// Draw cloud with shield and invincibility effects
 export function drawCloud(
   ctx: CanvasRenderingContext2D,
   cloud: {
@@ -334,6 +372,8 @@ export function drawCloud(
     isFrozen: boolean;
     speedMultiplier: number;
     isReversed: boolean;
+    isInvincible: boolean;
+    isShielded: boolean;
   },
   isDamaged = false,
 ) {
@@ -343,6 +383,12 @@ export function drawCloud(
   ctx.translate(cloud.x, cloud.y + cloud.bobOffset);
   ctx.scale(cloud.scale, cloud.scale);
   ctx.rotate(cloud.rotation);
+
+  // Handle invincibility blinking
+  if (cloud.isInvincible) {
+    const blinkAlpha = + 0.7 * Math.abs(Math.sin(Date.now() * GAME_CONSTANTS.INVINCIBILITY_BLINK_SPEED));
+    ctx.globalAlpha = blinkAlpha;
+  }
 
   // Add freeze effect
   if (cloud.isFrozen) {
@@ -365,6 +411,13 @@ export function drawCloud(
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
   }
+  // Add shield glow effect
+  else if (cloud.isShielded) {
+    ctx.shadowColor = '#32CD32';
+    ctx.shadowBlur = 30;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+  }
 
   // Add damage flash effect
   if (isDamaged) {
@@ -384,6 +437,8 @@ export function drawCloud(
     cloudColor = '#FFFACD';
   } else if (cloud.isReversed) {
     cloudColor = '#E6E6FA'; // Light purple for reversed
+  } else if (cloud.isShielded) {
+    cloudColor = '#F0FFF0'; // Light green for shielded
   }
 
   ctx.fillStyle = cloudColor;
@@ -414,11 +469,36 @@ export function drawCloud(
     ? 'rgba(255, 255, 255, 0.8)'
     : cloud.isReversed
     ? 'rgba(255, 255, 255, 0.7)'
+    : cloud.isShielded
+    ? 'rgba(255, 255, 255, 0.9)'
     : 'rgba(255, 255, 255, 0.6)';
   ctx.beginPath();
   ctx.arc(-8, -8, 8, 0, Math.PI * 2);
   ctx.arc(12, -12, 6, 0, Math.PI * 2);
   ctx.fill();
+
+  // Draw shield effect
+  if (cloud.isShielded) {
+    const shieldPulse = 1 + Math.sin(Date.now() * GAME_CONSTANTS.SHIELD_PULSE_SPEED) * 0.1;
+
+    // Shield sphere
+    ctx.strokeStyle = '#32CD32';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.6 * shieldPulse;
+    ctx.beginPath();
+    ctx.arc(0, 0, 50 * shieldPulse, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner shield glow
+    ctx.strokeStyle = '#90EE90';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.4 * shieldPulse;
+    ctx.beginPath();
+    ctx.arc(0, 0, 45 * shieldPulse, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+  }
 
   // Add freeze crystals effect
   if (cloud.isFrozen) {
@@ -490,7 +570,7 @@ export function drawCloud(
     ctx.fill();
 
     // Mouth - different for different states
-    ctx.strokeStyle = cloud.isFrozen ? '#0066CC' : cloud.isReversed ? '#800080' : '#333333';
+    ctx.strokeStyle = cloud.isFrozen ? '#0066CC' : cloud.isReversed ? '#800080' : cloud.isShielded ? '#32CD32' : '#333333';
     ctx.lineWidth = 2;
     ctx.beginPath();
     if (cloud.isFrozen) {
@@ -503,6 +583,10 @@ export function drawCloud(
       ctx.lineTo(-2, 6);
       ctx.lineTo(2, 2);
       ctx.lineTo(6, 6);
+      ctx.stroke();
+    } else if (cloud.isShielded) {
+      // Confident smile
+      ctx.arc(0, 2, 10, 0, Math.PI);
       ctx.stroke();
     } else {
       // Normal smile
@@ -525,10 +609,11 @@ export function drawCloud(
     ctx.stroke();
   }
 
-  // Reset shadow
+  // Reset shadow and alpha
   ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
+  ctx.globalAlpha = 1;
 
   ctx.restore();
 }

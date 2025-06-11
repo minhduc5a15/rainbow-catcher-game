@@ -61,6 +61,10 @@ export function useDropSystem() {
         colorIndex = -9;
         speedMultiplier = GAME_CONSTANTS.WATER_SPEED_MULTIPLIER;
         break;
+      case 'shield':
+        color = '#32CD32';
+        colorIndex = -10;
+        break;
       default:
         const randomColor = RAINBOW_COLORS[Math.floor(Math.random() * RAINBOW_COLORS.length)];
         color = randomColor.color;
@@ -79,18 +83,18 @@ export function useDropSystem() {
       id: `drop_${dropIdCounter.current++}`,
       // 3D effects
       scale: 0.8 + Math.random() * 0.4,
-      rotation: Math.random() * Math.PI * 2,
+      rotation: dropType !== "shield" ? Math.random() * Math.PI * 2 : 0,
       shadowOffset: Math.random() * GAME_CONSTANTS.SHADOW_OFFSET_MAX,
     };
 
-    // Add rocket-specific properties with cloud tracking
+    // Add rocket-specific properties with improved cloud tracking
     if (dropType === 'rocket') {
       drop.angle = Math.random() * Math.PI * 2;
-      drop.amplitude = 30 + Math.random() * 50;
-      drop.frequency = 0.03 + Math.random() * 0.02;
+      drop.amplitude = 20 + Math.random() * 30; // Reduced amplitude for better tracking
+      drop.frequency = 0.02 + Math.random() * 0.01; // Slower frequency
       drop.startY = drop.y;
       // Start rocket closer to cloud X position for better tracking
-      drop.x = cloudX + (Math.random() - 0.5) * 200;
+      drop.x = cloudX + (Math.random() - 0.5) * 150; // Reduced spread
     }
 
     return drop;
@@ -99,7 +103,7 @@ export function useDropSystem() {
   const getRandomDropType = useCallback((): Drop['type'] => {
     const rand = Math.random();
 
-    // Check for special drops first (total ~24.8%)
+    // Check for special drops first (total ~27.3%)
     let cumulativeProbability = 0;
 
     // Ultra rare drops
@@ -111,6 +115,12 @@ export function useDropSystem() {
     cumulativeProbability += GAME_CONSTANTS.HEART_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
       return 'heart';
+    }
+
+    // Shield drop (between heart and lightning)
+    cumulativeProbability += GAME_CONSTANTS.SHIELD_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      return 'shield';
     }
 
     // Water drop
@@ -152,7 +162,7 @@ export function useDropSystem() {
       return 'rocket';
     }
 
-    // Everything else is normal rainbow drops (~75.2%)
+    // Everything else is normal rainbow drops (~72.7%)
     return 'normal';
   }, []);
 
@@ -219,18 +229,21 @@ export function useDropSystem() {
       dropsRef.current.forEach((drop) => {
         // Update 3D effects
         if (drop.rotation !== undefined) {
-          drop.rotation += GAME_CONSTANTS.DROP_ROTATION_SPEED;
+          const dropTypes: Drop['type'][] = ['double', 'water', 'shield'];
+          if (!dropTypes.includes(drop.type)) {
+            drop.rotation += GAME_CONSTANTS.DROP_ROTATION_SPEED;
+          }
         }
 
         if (drop.type === 'rainbow') {
           // Rainbow drop complex pattern
           drop.x += Math.sin(drop.y * 0.01) * 2;
         } else if (drop.type === 'rocket') {
-          // Enhanced rocket movement - always track towards cloud
+          // Improved rocket movement with better tracking
           if (drop.angle !== undefined && drop.amplitude !== undefined && drop.frequency !== undefined && drop.startY !== undefined) {
             drop.angle += drop.frequency;
 
-            // Calculate direction towards cloud
+            // Calculate direction towards cloud with improved accuracy
             const targetX = cloudX;
             const deltaX = targetX - drop.x;
             const deltaY = cloudY - drop.y;
@@ -241,13 +254,21 @@ export function useDropSystem() {
               const directionX = deltaX / distance;
               const directionY = deltaY / distance;
 
-              // Move towards cloud with some oscillation
-              const oscillation = Math.sin(drop.angle) * (drop.amplitude * 0.3);
-              drop.x += directionX * drop.speed * 0.7 + oscillation * 0.3;
-              drop.y += Math.max(drop.speed * 0.8, directionY * drop.speed * 0.5);
+              // Improved movement with better balance between X and Y
+              const oscillation = Math.sin(drop.angle) * drop.amplitude * 0.2; // Reduced oscillation
+
+              // More balanced movement - slower Y, more responsive X
+              const moveX = directionX * drop.speed * GAME_CONSTANTS.ROCKET_X_SPEED_FACTOR * GAME_CONSTANTS.ROCKET_TRACKING_STRENGTH + oscillation;
+              const moveY = Math.max(
+                drop.speed * GAME_CONSTANTS.ROCKET_Y_SPEED_FACTOR, // Minimum Y movement
+                directionY * drop.speed * GAME_CONSTANTS.ROCKET_Y_SPEED_FACTOR,
+              );
+
+              drop.x += moveX;
+              drop.y += moveY;
             } else {
               // Fallback movement
-              drop.y += drop.speed;
+              drop.y += drop.speed * GAME_CONSTANTS.ROCKET_Y_SPEED_FACTOR;
             }
 
             // Keep rocket within canvas bounds

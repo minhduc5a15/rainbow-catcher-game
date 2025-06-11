@@ -36,7 +36,7 @@ export function GlobalHighScoreDisplay() {
   const timeAgo = getTimeAgo(globalHighScore.timestamp);
 
   return (
-    <Button variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30" disabled>
+    <Button variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
       🌍 Global: {globalHighScore.score.toLocaleString()} ({timeAgo})
     </Button>
   );
