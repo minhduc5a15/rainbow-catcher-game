@@ -523,6 +523,7 @@ export default function RainbowCatcher() {
           if (gameState.isPaused) {
             handleResume();
           } else if (gameState.isPointerLocked) {
+            document.exitPointerLock();
             handlePause();
           }
         }
