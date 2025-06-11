@@ -2,6 +2,11 @@
   "name": "rainbow-catcher",
   "version": "0.1.0",
   "private": true,
+  "author": {
+    "email": "minhduc5a15@gmail.com",
+    "name": "Pham Minh Duc",
+    "url": "https://github.com/minhduc5a15"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
