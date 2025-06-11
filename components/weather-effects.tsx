@@ -41,6 +41,9 @@ export function useWeatherEffects() {
         size: 0.3 + Math.random() * 0.7,
         speed: 0.1 + Math.random() * 0.3,
         opacity: 0.3 + Math.random() * 0.4,
+        // Add 3D effect properties
+        scale: 0.8 + Math.random() * 0.4,
+        rotation: Math.random() * Math.PI * 2,
       });
     }
     backgroundCloudsRef.current = clouds;

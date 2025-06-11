@@ -83,6 +83,8 @@ export interface GameState {
   timeOfDay: 'day' | 'night';
   // Remove automatic rain shower system
   manualRainShowerOnly: boolean;
+  // New pause state
+  isPaused?: boolean;
 }
 
 export interface PowerUp {
@@ -97,8 +99,8 @@ export interface BackgroundCloud {
   speed: number;
   opacity: number;
   // 3D effect properties
-  scale?: number;
-  rotation?: number;
+  scale: number;
+  rotation: number;
 }
 
 export interface Star {

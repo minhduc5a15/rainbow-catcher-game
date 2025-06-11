@@ -1,11 +1,11 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import type { Cloud, Drop, GameState } from '@/types/game';
+import type { Cloud, Drop } from '@/types/game';
 import { useParticleSystem } from '@/components/particle-system';
 import { useDropSystem } from '@/components/drop-system';
 import { useGameCanvas } from '@/components/game-canvas';
@@ -13,7 +13,9 @@ import { useDamageEffect } from '@/components/damage-effect';
 import { useWeatherEffects } from '@/components/weather-effects';
 import { GameUI, GameStats } from '@/components/game-ui';
 import { GlobalHighScoreDisplay } from '@/components/global-high-score';
+import { PauseMenu } from '@/components/pause-menu';
 import { updateGlobalHighScore } from '@/lib/firebase';
+import { useGameStore } from '@/store/game-store';
 import { GAME_CONSTANTS } from '@/constants/game';
 
 export default function RainbowCatcher() {
@@ -21,47 +23,12 @@ export default function RainbowCatcher() {
   const gameLoopRef = useRef<number>(0);
   const mouseXRef = useRef<number>(0);
   const damageFlashRef = useRef<number>(0);
+  const highScoreRef = useRef<number>(0);
+  const showGameOverDialogRef = useRef<boolean>(false);
+  const newGlobalRecordRef = useRef<boolean>(false);
 
-  const [gameState, setGameState] = useState<GameState>({
-    state: 'menu',
-    score: 0,
-    missedDrops: 0,
-    nextColorIndex: 0,
-    gameSpeed: 1,
-    lives: GAME_CONSTANTS.MAX_LIVES,
-    perfectRainbowCount: 0,
-    isAutoCollecting: false,
-    autoCollectEndTime: 0,
-    cloudSpeedBoostEndTime: 0,
-    cloudFreezeEndTime: 0,
-    cloudReverseEndTime: 0,
-    doublePointsEndTime: 0,
-    isRainShower: false,
-    rainShowerEndTime: 0,
-    nextRainShowerTime: 0,
-    perfectRainbowProgress: 0,
-    showPerfectRainbowLost: false,
-    perfectRainbowLostTime: 0,
-    isPointerLocked: false,
-    lightningFlash: false,
-    nextLightningTime: 0,
-    showSpeedBoostMessage: false,
-    speedBoostMessageEndTime: 0,
-    showAutoCollectMessage: false,
-    autoCollectMessageEndTime: 0,
-    showFreezeMessage: false,
-    freezeMessageEndTime: 0,
-    showReverseMessage: false,
-    reverseMessageEndTime: 0,
-    showDoublePointsMessage: false,
-    doublePointsMessageEndTime: 0,
-    timeOfDay: 'day',
-    manualRainShowerOnly: true, // Disable automatic rain shower
-  });
-
-  const [highScore, setHighScore] = useState(0);
-  const [showGameOverDialog, setShowGameOverDialog] = useState(false);
-  const [newGlobalRecord, setNewGlobalRecord] = useState(false);
+  // Use Zustand store
+  const gameState = useGameStore();
 
   const cloudRef = useRef<Cloud>({
     x: 400,
@@ -71,7 +38,6 @@ export default function RainbowCatcher() {
     speedMultiplier: 1,
     isFrozen: false,
     isReversed: false,
-    // 3D effects
     scale: 1,
     rotation: 0,
     bobOffset: 0,
@@ -103,30 +69,27 @@ export default function RainbowCatcher() {
   const loadHighScore = useCallback(() => {
     const savedScore = localStorage.getItem('rainbowCatcherHighScore');
     if (savedScore) {
-      setHighScore(Number.parseInt(savedScore, 10));
+      highScoreRef.current = Number.parseInt(savedScore, 10);
     }
   }, []);
 
-  const saveHighScore = useCallback(
-    async (newScore: number) => {
-      // Save local high score
-      if (newScore > highScore) {
-        localStorage.setItem('rainbowCatcherHighScore', newScore.toString());
-        setHighScore(newScore);
-      }
+  const saveHighScore = useCallback(async (newScore: number) => {
+    // Save local high score
+    if (newScore > highScoreRef.current) {
+      localStorage.setItem('rainbowCatcherHighScore', newScore.toString());
+      highScoreRef.current = newScore;
+    }
 
-      // Try to update global high score
-      try {
-        const isNewGlobalRecord = await updateGlobalHighScore(newScore);
-        setNewGlobalRecord(isNewGlobalRecord);
-        return isNewGlobalRecord;
-      } catch (error) {
-        console.error('Failed to update global high score:', error);
-        return false;
-      }
-    },
-    [highScore],
-  );
+    // Try to update global high score
+    try {
+      const isNewGlobalRecord = await updateGlobalHighScore(newScore);
+      newGlobalRecordRef.current = isNewGlobalRecord;
+      return isNewGlobalRecord;
+    } catch (error) {
+      console.error('Failed to update global high score:', error);
+      return false;
+    }
+  }, []);
 
   const autoCollectColors = useCallback(() => {
     const drops = dropsRef.current;
@@ -140,16 +103,13 @@ export default function RainbowCatcher() {
         let points = GAME_CONSTANTS.NORMAL_DROP_POINTS;
         if (drop.colorIndex === gameState.nextColorIndex) {
           points += GAME_CONSTANTS.CORRECT_ORDER_BONUS;
-          setGameState((prev) => ({
-            ...prev,
-            nextColorIndex: (prev.nextColorIndex + 1) % 7,
-            perfectRainbowProgress: prev.perfectRainbowProgress + 1,
-          }));
+          gameState.setNextColorIndex((gameState.nextColorIndex + 1) % 7);
+          gameState.setPerfectRainbowProgress(gameState.perfectRainbowProgress + 1);
         }
 
         // Apply double points if active
         const multiplier = (gameState.isRainShower ? 2 : 1) * (gameState.doublePointsEndTime > Date.now() ? 2 : 1);
-        setGameState((prev) => ({ ...prev, score: prev.score + points * multiplier }));
+        gameState.setScore(gameState.score + points * multiplier);
 
         drops.splice(i, 1);
         collectedCount++;
@@ -157,20 +117,22 @@ export default function RainbowCatcher() {
     }
 
     return collectedCount;
-  }, [createCatchParticles, gameState.nextColorIndex, gameState.isRainShower, gameState.doublePointsEndTime]);
+  }, [createCatchParticles, gameState]);
 
-  const resetPerfectRainbow = useCallback((showMessage = true) => {
-    setGameState((prev) => ({
-      ...prev,
-      nextColorIndex: 0,
-      perfectRainbowProgress: 0,
-      showPerfectRainbowLost: showMessage,
-      perfectRainbowLostTime: showMessage ? Date.now() + 2000 : 0,
-    }));
-  }, []);
+  const resetPerfectRainbow = useCallback(
+    (showMessage = true) => {
+      gameState.updateGameState({
+        nextColorIndex: 0,
+        perfectRainbowProgress: 0,
+        showPerfectRainbowLost: showMessage,
+        perfectRainbowLostTime: showMessage ? Date.now() + 2000 : 0,
+      });
+    },
+    [gameState],
+  );
 
   const updateGame = useCallback(() => {
-    if (gameState.state !== 'playing') return;
+    if (gameState.state !== 'playing' || gameState.isPaused) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -188,7 +150,7 @@ export default function RainbowCatcher() {
     // Update 3D cloud effects
     const cloud = cloudRef.current;
     cloud.bobOffset = Math.sin(now * GAME_CONSTANTS.CLOUD_BOB_FREQUENCY) * GAME_CONSTANTS.CLOUD_BOB_AMPLITUDE;
-    cloud.rotation = Math.sin(now * 0.001) * 0.05; // Subtle rotation
+    cloud.rotation = Math.sin(now * 0.001) * 0.05;
 
     // Update weather effects and stars
     updateWeatherEffects(gameState.isRainShower);
@@ -197,96 +159,97 @@ export default function RainbowCatcher() {
     }
 
     // Update power-ups and effects
-    setGameState((prev) => {
-      const newState = { ...prev };
+    const updates: any = {};
 
-      // Update cloud speed boost
-      if (now > prev.cloudSpeedBoostEndTime && prev.cloudSpeedBoostEndTime > 0) {
-        if (cloudRef.current.speedMultiplier > 1) {
-          cloudRef.current.speedMultiplier = 1;
-        }
-        newState.cloudSpeedBoostEndTime = 0;
+    // Update cloud speed boost
+    if (now > gameState.cloudSpeedBoostEndTime && gameState.cloudSpeedBoostEndTime > 0) {
+      if (cloudRef.current.speedMultiplier > 1) {
+        cloudRef.current.speedMultiplier = 1;
       }
+      updates.cloudSpeedBoostEndTime = 0;
+    }
 
-      // Update cloud freeze effect
-      if (now > prev.cloudFreezeEndTime && prev.cloudFreezeEndTime > 0) {
-        if (cloudRef.current.isFrozen) {
-          cloudRef.current.isFrozen = false;
-        }
-        newState.cloudFreezeEndTime = 0;
+    // Update cloud freeze effect
+    if (now > gameState.cloudFreezeEndTime && gameState.cloudFreezeEndTime > 0) {
+      if (cloudRef.current.isFrozen) {
+        cloudRef.current.isFrozen = false;
       }
+      updates.cloudFreezeEndTime = 0;
+    }
 
-      // Update cloud reverse effect
-      if (now > prev.cloudReverseEndTime && prev.cloudReverseEndTime > 0) {
-        if (cloudRef.current.isReversed) {
-          cloudRef.current.isReversed = false;
-        }
-        newState.cloudReverseEndTime = 0;
+    // Update cloud reverse effect
+    if (now > gameState.cloudReverseEndTime && gameState.cloudReverseEndTime > 0) {
+      if (cloudRef.current.isReversed) {
+        cloudRef.current.isReversed = false;
       }
+      updates.cloudReverseEndTime = 0;
+    }
 
-      // Update double points
-      if (now > prev.doublePointsEndTime && prev.doublePointsEndTime > 0) {
-        newState.doublePointsEndTime = 0;
-      }
+    // Update double points
+    if (now > gameState.doublePointsEndTime && gameState.doublePointsEndTime > 0) {
+      updates.doublePointsEndTime = 0;
+    }
 
-      // Update auto-collect
-      if (prev.isAutoCollecting && now > prev.autoCollectEndTime) {
-        newState.isAutoCollecting = false;
-      }
+    // Update auto-collect
+    if (gameState.isAutoCollecting && now > gameState.autoCollectEndTime) {
+      updates.isAutoCollecting = false;
+    }
 
-      // Update rain shower (only manual now)
-      if (prev.isRainShower && now > prev.rainShowerEndTime) {
-        newState.isRainShower = false;
-      }
+    // Update rain shower
+    if (gameState.isRainShower && now > gameState.rainShowerEndTime) {
+      updates.isRainShower = false;
+    }
 
-      // Update perfect rainbow lost message
-      if (prev.showPerfectRainbowLost && now > prev.perfectRainbowLostTime) {
-        newState.showPerfectRainbowLost = false;
-      }
+    // Update perfect rainbow lost message
+    if (gameState.showPerfectRainbowLost && now > gameState.perfectRainbowLostTime) {
+      updates.showPerfectRainbowLost = false;
+    }
 
-      // Update power-up messages
-      if (prev.showSpeedBoostMessage && now > prev.speedBoostMessageEndTime) {
-        newState.showSpeedBoostMessage = false;
-      }
+    // Update power-up messages
+    if (gameState.showSpeedBoostMessage && now > gameState.speedBoostMessageEndTime) {
+      updates.showSpeedBoostMessage = false;
+    }
 
-      if (prev.showAutoCollectMessage && now > prev.autoCollectMessageEndTime) {
-        newState.showAutoCollectMessage = false;
-      }
+    if (gameState.showAutoCollectMessage && now > gameState.autoCollectMessageEndTime) {
+      updates.showAutoCollectMessage = false;
+    }
 
-      if (prev.showFreezeMessage && now > prev.freezeMessageEndTime) {
-        newState.showFreezeMessage = false;
-      }
+    if (gameState.showFreezeMessage && now > gameState.freezeMessageEndTime) {
+      updates.showFreezeMessage = false;
+    }
 
-      if (prev.showReverseMessage && now > prev.reverseMessageEndTime) {
-        newState.showReverseMessage = false;
-      }
+    if (gameState.showReverseMessage && now > gameState.reverseMessageEndTime) {
+      updates.showReverseMessage = false;
+    }
 
-      if (prev.showDoublePointsMessage && now > prev.doublePointsMessageEndTime) {
-        newState.showDoublePointsMessage = false;
-      }
+    if (gameState.showDoublePointsMessage && now > gameState.doublePointsMessageEndTime) {
+      updates.showDoublePointsMessage = false;
+    }
 
-      // Check for day/night cycle change
-      const currentCycle = Math.floor(prev.perfectRainbowCount / GAME_CONSTANTS.PERFECT_RAINBOWS_FOR_SCENE_CHANGE);
-      const sceneIndex = currentCycle % 2;
-      let newTimeOfDay: 'day' | 'night';
+    // Check for day/night cycle change
+    const currentCycle = Math.floor(gameState.perfectRainbowCount / GAME_CONSTANTS.PERFECT_RAINBOWS_FOR_SCENE_CHANGE);
+    const sceneIndex = currentCycle % 2;
+    let newTimeOfDay: 'day' | 'night';
 
-      switch (sceneIndex) {
-        case 0:
-          newTimeOfDay = 'day';
-          break;
-        case 1:
-          newTimeOfDay = 'night';
-          break;
-        default:
-          newTimeOfDay = 'day';
-      }
+    switch (sceneIndex) {
+      case 0:
+        newTimeOfDay = 'day';
+        break;
+      case 1:
+        newTimeOfDay = 'night';
+        break;
+      default:
+        newTimeOfDay = 'day';
+    }
 
-      if (newTimeOfDay !== prev.timeOfDay) {
-        newState.timeOfDay = newTimeOfDay;
-      }
+    if (newTimeOfDay !== gameState.timeOfDay) {
+      updates.timeOfDay = newTimeOfDay;
+    }
 
-      return newState;
-    });
+    // Apply all updates at once
+    if (Object.keys(updates).length > 0) {
+      gameState.updateGameState(updates);
+    }
 
     // Auto-collect during power-up
     if (gameState.isAutoCollecting) {
@@ -298,7 +261,6 @@ export default function RainbowCatcher() {
       const targetX = Math.max(GAME_CONSTANTS.CLOUD_MIN_X, Math.min(GAME_CONSTANTS.CLOUD_MAX_X, mouseXRef.current));
       const diff = targetX - cloud.x;
 
-      // Don't apply reverse here since it's already handled in handleMouseMove
       const responsiveness = gameState.isPointerLocked ? GAME_CONSTANTS.MOUSE_RESPONSIVENESS_LOCKED : GAME_CONSTANTS.MOUSE_RESPONSIVENESS;
       cloud.x += diff * responsiveness * cloud.speedMultiplier;
 
@@ -329,7 +291,7 @@ export default function RainbowCatcher() {
     }
 
     // Increase game speed over time
-    setGameState((prev) => ({ ...prev, gameSpeed: Math.min(3, prev.gameSpeed + 0.001) }));
+    gameState.setGameSpeed(Math.min(3, gameState.gameSpeed + 0.001));
 
     // Render everything
     renderGame(
@@ -370,89 +332,81 @@ export default function RainbowCatcher() {
         createRainbowLostEffect(cloudRef.current.x, cloudRef.current.y);
         resetPerfectRainbow(true);
 
-        setGameState((prev) => {
-          const newLives = prev.lives - 1;
-          if (newLives <= 0) {
-            saveHighScore(prev.score);
-            setShowGameOverDialog(true);
-            // Release pointer lock immediately on game over
-            if (document.pointerLockElement) {
-              document.exitPointerLock();
-            }
-            return { ...prev, lives: 0, state: 'gameOver' };
+        const newLives = gameState.lives - 1;
+        if (newLives <= 0) {
+          saveHighScore(gameState.score);
+          showGameOverDialogRef.current = true;
+          // Release pointer lock immediately on game over
+          if (document.pointerLockElement) {
+            document.exitPointerLock();
           }
-          return { ...prev, lives: newLives };
-        });
+          gameState.updateGameState({ lives: 0, state: 'gameOver' });
+        } else {
+          gameState.setLives(newLives);
+        }
       } else if (drop.type === 'water') {
         // Water drop: instantly trigger rain shower
-        setGameState((prev) => ({
-          ...prev,
+        gameState.updateGameState({
           isRainShower: true,
           rainShowerEndTime: now + GAME_CONSTANTS.RAIN_SHOWER_DURATION,
-          score: prev.score + 30, // Bonus points for water drop
-        }));
+          score: gameState.score + 30,
+        });
       } else if (drop.type === 'hail') {
         // Hail: freeze cloud immediately
         cloudRef.current.isFrozen = true;
         cloudRef.current.speedMultiplier = 1;
         cloudRef.current.isReversed = false;
-        setGameState((prev) => ({
-          ...prev,
+        gameState.updateGameState({
           cloudFreezeEndTime: now + GAME_CONSTANTS.FREEZE_DURATION,
           cloudSpeedBoostEndTime: 0,
           cloudReverseEndTime: 0,
           showFreezeMessage: true,
           freezeMessageEndTime: now + 1500,
-        }));
+        });
       } else if (drop.type === 'reverse') {
         // Reverse: reverse cloud controls
         cloudRef.current.isReversed = true;
         cloudRef.current.isFrozen = false;
-        setGameState((prev) => ({
-          ...prev,
+        gameState.updateGameState({
           cloudReverseEndTime: now + GAME_CONSTANTS.REVERSE_DURATION,
           cloudFreezeEndTime: 0,
           showReverseMessage: true,
           reverseMessageEndTime: now + 1500,
-        }));
+        });
       } else if (drop.type === 'double') {
         // Double: double points for a duration
-        setGameState((prev) => ({
-          ...prev,
+        gameState.updateGameState({
           doublePointsEndTime: now + GAME_CONSTANTS.DOUBLE_POINTS_DURATION,
           showDoublePointsMessage: true,
           doublePointsMessageEndTime: now + 1500,
-        }));
+        });
       } else if (drop.type === 'lightning') {
         // Lightning drop: speed boost
         cloudRef.current.speedMultiplier = GAME_CONSTANTS.CLOUD_SPEED_BOOST_MULTIPLIER;
         cloudRef.current.isFrozen = false;
         cloudRef.current.isReversed = false;
-        setGameState((prev) => ({
-          ...prev,
+        gameState.updateGameState({
           cloudSpeedBoostEndTime: now + GAME_CONSTANTS.SPEED_BOOST_DURATION,
           cloudFreezeEndTime: 0,
           cloudReverseEndTime: 0,
           showSpeedBoostMessage: true,
           speedBoostMessageEndTime: now + 1500,
-        }));
+        });
       } else if (drop.type === 'rainbow') {
         // Rainbow drop: auto-collect
-        setGameState((prev) => ({
-          ...prev,
+        gameState.updateGameState({
           isAutoCollecting: true,
           autoCollectEndTime: now + GAME_CONSTANTS.AUTO_COLLECT_DURATION,
-          score: prev.score + GAME_CONSTANTS.RAINBOW_DROP_POINTS,
+          score: gameState.score + GAME_CONSTANTS.RAINBOW_DROP_POINTS,
           showAutoCollectMessage: true,
           autoCollectMessageEndTime: now + 1500,
-        }));
+        });
       } else if (drop.type === 'heart') {
         // Heart drop: gain life (max 3)
-        setGameState((prev) => ({
-          ...prev,
-          lives: Math.min(GAME_CONSTANTS.MAX_LIVES, prev.lives + 1),
-          score: prev.score + 20,
-        }));
+        gameState.updateGameState({
+          lives: Math.min(GAME_CONSTANTS.MAX_LIVES, gameState.lives + 1),
+          score: gameState.score + 20,
+        });
       } else {
         // Normal drop logic
         let points = GAME_CONSTANTS.NORMAL_DROP_POINTS;
@@ -470,81 +424,33 @@ export default function RainbowCatcher() {
             createPerfectRainbowEffect(drop.x, drop.y);
           }
 
-          setGameState((prev) => ({
-            ...prev,
+          gameState.updateGameState({
             nextColorIndex: newNextIndex,
             perfectRainbowProgress: perfectRainbow ? 0 : newProgress,
-            perfectRainbowCount: perfectRainbow ? prev.perfectRainbowCount + 1 : prev.perfectRainbowCount,
+            perfectRainbowCount: perfectRainbow ? gameState.perfectRainbowCount + 1 : gameState.perfectRainbowCount,
             isAutoCollecting: perfectRainbow,
-            autoCollectEndTime: perfectRainbow ? now + GAME_CONSTANTS.AUTO_COLLECT_DURATION : prev.autoCollectEndTime,
+            autoCollectEndTime: perfectRainbow ? now + GAME_CONSTANTS.AUTO_COLLECT_DURATION : gameState.autoCollectEndTime,
             showAutoCollectMessage: perfectRainbow,
-            autoCollectMessageEndTime: perfectRainbow ? now + 1500 : prev.autoCollectMessageEndTime,
-          }));
+            autoCollectMessageEndTime: perfectRainbow ? now + 1500 : gameState.autoCollectMessageEndTime,
+          });
         }
 
         // Apply double points if active
         const multiplier = (gameState.isRainShower ? 2 : 1) * (gameState.doublePointsEndTime > now ? 2 : 1);
-        setGameState((prev) => ({ ...prev, score: prev.score + points * multiplier }));
+        gameState.setScore(gameState.score + points * multiplier);
       }
     },
-    [
-      createCatchParticles,
-      createPerfectRainbowEffect,
-      createRainbowLostEffect,
-      createDamageText,
-      resetPerfectRainbow,
-      gameState.nextColorIndex,
-      gameState.perfectRainbowProgress,
-      gameState.isRainShower,
-      gameState.doublePointsEndTime,
-      saveHighScore,
-    ],
+    [createCatchParticles, createPerfectRainbowEffect, createRainbowLostEffect, createDamageText, resetPerfectRainbow, gameState, saveHighScore],
   );
 
   const startGame = useCallback(() => {
-    const now = Date.now();
-    setGameState({
-      state: 'playing',
-      score: 0,
-      missedDrops: 0,
-      nextColorIndex: 0,
-      gameSpeed: 1,
-      lives: GAME_CONSTANTS.MAX_LIVES,
-      perfectRainbowCount: 0,
-      isAutoCollecting: false,
-      autoCollectEndTime: 0,
-      cloudSpeedBoostEndTime: 0,
-      cloudFreezeEndTime: 0,
-      cloudReverseEndTime: 0,
-      doublePointsEndTime: 0,
-      isRainShower: false,
-      rainShowerEndTime: 0,
-      nextRainShowerTime: 0, // No automatic rain shower
-      perfectRainbowProgress: 0,
-      showPerfectRainbowLost: false,
-      perfectRainbowLostTime: 0,
-      isPointerLocked: false,
-      lightningFlash: false,
-      nextLightningTime: now + 2000,
-      showSpeedBoostMessage: false,
-      speedBoostMessageEndTime: 0,
-      showAutoCollectMessage: false,
-      autoCollectMessageEndTime: 0,
-      showFreezeMessage: false,
-      freezeMessageEndTime: 0,
-      showReverseMessage: false,
-      reverseMessageEndTime: 0,
-      showDoublePointsMessage: false,
-      doublePointsMessageEndTime: 0,
-      timeOfDay: 'day',
-      manualRainShowerOnly: true,
-    });
+    gameState.startGame();
     clearDrops();
     clearParticles();
     clearDamageTexts();
     clearWeatherEffects();
     damageFlashRef.current = 0;
-    setNewGlobalRecord(false);
+    newGlobalRecordRef.current = false;
     cloudRef.current = {
       x: 400,
       y: GAME_CONSTANTS.CLOUD_Y_POSITION,
@@ -558,12 +464,12 @@ export default function RainbowCatcher() {
       bobOffset: 0,
     };
     loadHighScore();
-    setShowGameOverDialog(false);
-  }, [clearDrops, clearParticles, clearDamageTexts, clearWeatherEffects, loadHighScore]);
+    showGameOverDialogRef.current = false;
+  }, [gameState, clearDrops, clearParticles, clearDamageTexts, clearWeatherEffects, loadHighScore]);
 
   const resetGame = useCallback(() => {
-    setGameState((prev) => ({ ...prev, state: 'menu' }));
-    setShowGameOverDialog(false);
+    gameState.resetGame();
+    showGameOverDialogRef.current = false;
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
     }
@@ -572,7 +478,23 @@ export default function RainbowCatcher() {
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }
-  }, []);
+  }, [gameState]);
+
+  // Handle pause functionality
+  const handlePause = useCallback(() => {
+    if (gameState.state === 'playing' && gameState.isPointerLocked) {
+      gameState.pauseGame();
+    }
+  }, [gameState]);
+
+  const handleResume = useCallback(() => {
+    gameState.resumeGame();
+  }, [gameState]);
+
+  const handleRestart = useCallback(() => {
+    gameState.resumeGame();
+    startGame();
+  }, [gameState, startGame]);
 
   // Game loop
   useEffect(() => {
@@ -591,6 +513,25 @@ export default function RainbowCatcher() {
       }
     };
   }, [gameState.state, updateGame]);
+
+  // Keyboard controls for pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (gameState.state === 'playing') {
+          if (gameState.isPaused) {
+            handleResume();
+          } else if (gameState.isPointerLocked) {
+            handlePause();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [gameState.state, gameState.isPaused, gameState.isPointerLocked, handlePause, handleResume]);
 
   // Mouse controls and pointer lock
   const handleMouseMove = useCallback(
@@ -639,10 +580,7 @@ export default function RainbowCatcher() {
   // Handle pointer lock changes
   useEffect(() => {
     const handlePointerLockChange = () => {
-      setGameState((prev) => ({
-        ...prev,
-        isPointerLocked: document.pointerLockElement === canvasRef.current,
-      }));
+      gameState.setIsPointerLocked(document.pointerLockElement === canvasRef.current);
     };
 
     const handleMouseMoveGlobal = (e: MouseEvent) => {
@@ -658,7 +596,7 @@ export default function RainbowCatcher() {
       document.removeEventListener('pointerlockchange', handlePointerLockChange);
       document.removeEventListener('mousemove', handleMouseMoveGlobal);
     };
-  }, [handleMouseMove]);
+  }, [handleMouseMove, gameState]);
 
   const handleMouseLeave = useCallback(() => {
     if (!gameState.isPointerLocked) {
@@ -701,27 +639,32 @@ export default function RainbowCatcher() {
         </div>
       </div>
 
-      <Card className="p-6 bg-gradient-to-br from-white/95 to-purple-100/95 backdrop-blur-sm border-4 border-purple-300 shadow-2xl">
+      <Card className="p-6 bg-gradient-to-br from-white/95 to-purple-100/95 backdrop-blur-sm border-4 border-purple-300 shadow-2xl relative">
         <GameStats gameState={gameState} />
 
-        <canvas
-          ref={canvasRef}
-          width={GAME_CONSTANTS.CANVAS_WIDTH}
-          height={GAME_CONSTANTS.CANVAS_HEIGHT}
-          className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-inner"
-          onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          onClick={handleCanvasClick}
-        />
+        <div className="relative">
+          <canvas
+            ref={canvasRef}
+            width={GAME_CONSTANTS.CANVAS_WIDTH}
+            height={GAME_CONSTANTS.CANVAS_HEIGHT}
+            className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-inner"
+            onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleCanvasClick}
+          />
+
+          {/* Pause Menu Overlay */}
+          {gameState.isPaused && <PauseMenu onContinue={handleResume} onRestart={handleRestart} />}
+        </div>
 
         <GameUI
           gameState={gameState}
-          highScore={highScore}
-          newGlobalRecord={newGlobalRecord}
+          highScore={highScoreRef.current}
+          newGlobalRecord={newGlobalRecordRef.current}
           onStartGame={startGame}
           onResetGame={resetGame}
-          showGameOverDialog={showGameOverDialog}
-          onCloseGameOverDialog={() => setShowGameOverDialog(false)}
+          showGameOverDialog={showGameOverDialogRef.current}
+          onCloseGameOverDialog={() => (showGameOverDialogRef.current = false)}
         />
       </Card>
 
@@ -729,7 +672,7 @@ export default function RainbowCatcher() {
         <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
         <p>⚡ Golden = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
         <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm</p>
-        <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock)</p>
+        <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock) | ⏸️ Press Space to pause</p>
       </div>
 
       {/* Author Section */}
