@@ -17,7 +17,7 @@ import { useGameStore } from '@/store/game-store';
 import { GAME_CONSTANTS } from '@/constants/game';
 import { GlobalHighScoreDisplay } from '@/components/global-high-score';
 import { playSound, stopAllSounds, stopSound } from '@/lib/sounds';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, MOBILE_BREAKPOINT } from '@/hooks/use-mobile';
 
 export default function RainbowCatcher() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -756,7 +756,7 @@ export default function RainbowCatcher() {
       <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
         <div className="text-center p-6 bg-white/90 rounded-lg shadow-lg">
           <h1 className="text-4xl font-bold text-purple-800 mb-4">🌈 Rainbow Catcher</h1>
-          <p className="text-lg text-gray-700 mb-6">Oops! This game is not supported on mobile devices.</p>
+          <p className="text-lg text-gray-700 mb-6">This game is not supported on touch devices or screens smaller than {MOBILE_BREAKPOINT}px.</p>
           <p className="text-sm text-gray-500">Please play on a desktop or laptop for the best experience!</p>
         </div>
       </div>
