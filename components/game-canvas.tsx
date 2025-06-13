@@ -18,6 +18,8 @@ import {
   drawShieldDrop,
   drawNormalDrop,
   drawCloud,
+  drawRainbow,
+  drawMoonbow,
 } from './draw-utils';
 
 interface GameCanvasProps {
@@ -620,20 +622,12 @@ export function useGameCanvas() {
         drawWeatherEffects(ctx, gameState.timeOfDay);
       }
 
-      // Enhanced rainbow arc with glow - adjust position for focus mode
-      const centerX = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_X : GAME_CONSTANTS.RAINBOW_CENTER_X;
-      const centerY = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_Y : GAME_CONSTANTS.RAINBOW_CENTER_Y;
-      const radius = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_BASE_RADIUS : GAME_CONSTANTS.RAINBOW_BASE_RADIUS;
-
-      for (let i = 0; i < RAINBOW_COLORS.length; i++) {
-        ctx.strokeStyle = RAINBOW_COLORS[i].color;
-        ctx.lineWidth = GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH;
-        ctx.globalAlpha = gameState.isRainShower ? 0.2 : gameState.timeOfDay === 'night' ? 0.8 : 0.6;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius + i * GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH, 0, Math.PI);
-        ctx.stroke();
+      // Draw rainbow or moonbow based on timeOfDay
+      if (gameState.timeOfDay === 'day') {
+        drawRainbow(ctx, gameState, focusMode);
+      } else {
+        drawMoonbow(ctx, gameState, focusMode);
       }
-      ctx.globalAlpha = 1;
 
       // Enhanced rain effect - adjust for canvas size
       if (gameState.isRainShower) {
@@ -652,7 +646,7 @@ export function useGameCanvas() {
 
       drawRainbowProgressBar(ctx, gameState.nextColorIndex, gameState.perfectRainbowCount, gameState.showPerfectRainbowLost, focusMode);
     },
-    [drawRainbowProgressBar],
+    [drawRainbowProgressBar, drawRainbow, drawMoonbow],
   );
 
   const renderGame = useCallback(

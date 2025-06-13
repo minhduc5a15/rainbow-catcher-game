@@ -26,7 +26,7 @@ export function GameUI({ gameState, highScore, newGlobalRecord, onStartGame, onR
             <div className="text-sm text-gray-600 space-y-1">
               <p>🖱️ Use mouse to move the cloud</p>
               <p>🌈 Catch colors in rainbow order for bonus points!</p>
-              <p>⚡ Golden drops boost cloud speed</p>
+              <p>⚡ Lightning drops boost cloud speed</p>
               <p>💣 Avoid black drops (lose life)</p>
               <p>🚀 Avoid rockets (lose life)</p>
               <p>🌈 Rainbow drops auto-collect all colors</p>

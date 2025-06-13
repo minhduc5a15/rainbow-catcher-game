@@ -30,7 +30,7 @@ export const GAME_CONSTANTS = {
   // Drop spawn rates (percentages) - SPECIAL DROPS ONLY - Balanced
   RAINBOW_DROP_CHANCE: 0.004, // 0.4%
   HEART_DROP_CHANCE: 0.004, // 0.4%
-  SHIELD_DROP_CHANCE: 0.025, // New: 2.5% (between heart and lightning)
+  SHIELD_DROP_CHANCE: 0.025, // 2.5% (between heart and lightning)
   WATER_DROP_CHANCE: 0.012, // 1.2%
 
   LIGHTNING_DROP_CHANCE: 0.05, // 5%
@@ -38,10 +38,10 @@ export const GAME_CONSTANTS = {
   REVERSE_DROP_CHANCE: 0.05, // 5%
   DOUBLE_DROP_CHANCE: 0.035, // 3.5%
 
-  BOMB_DROP_CHANCE: 0.07, // 7%
-  ROCKET_DROP_CHANCE: 0.07, // 7%
+  BOMB_DROP_CHANCE: 0.08, // 8%
+  ROCKET_DROP_CHANCE: 0.08, // 8%
 
-  // Total special drops: ~27.3%, Normal drops: ~72.7%
+  // Total special drops: 0.4% + 0.4% + 2.5% + 1.2% + 5% + 5% + 5% + 3.5% + 8% + 8% = 39%, Normal drops: 61%
 
   // Drop speed multipliers
   BOMB_SPEED_MULTIPLIER: 1.8,

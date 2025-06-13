@@ -1,5 +1,6 @@
 import { GAME_CONSTANTS } from '@/constants/game';
-import type { Drop } from '@/types/game';
+import type { Drop, GameState } from '@/types/game';
+import { RAINBOW_COLORS, MOONBOW_COLORS } from '@/types/game';
 
 // Draw shield drop
 export function drawShieldDrop(ctx: CanvasRenderingContext2D) {
@@ -324,7 +325,7 @@ export function drawDoublePointsDrop(ctx: CanvasRenderingContext2D) {
     const sparkleY = Math.sin(angle) * 15;
 
     ctx.save();
-    ctx.translate(sparkleX, sparkleY);
+    ctx.translate(sparkleX,15);
     ctx.rotate(time * 0.5);
     ctx.font = '8px Arial';
     ctx.textAlign = 'center';
@@ -358,6 +359,68 @@ export function drawNormalDrop(ctx: CanvasRenderingContext2D, color: string) {
   ctx.beginPath();
   ctx.arc(-2, -2, 4, 0, Math.PI * 2);
   ctx.fill();
+}
+
+// Draw rainbow
+export function drawRainbow(ctx: CanvasRenderingContext2D, gameState: GameState, focusMode = false) {
+  const centerX = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_X : GAME_CONSTANTS.RAINBOW_CENTER_X;
+  const centerY = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_Y : GAME_CONSTANTS.RAINBOW_CENTER_Y;
+  const radius = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_BASE_RADIUS : GAME_CONSTANTS.RAINBOW_BASE_RADIUS;
+
+  // Add glow effect
+  ctx.save();
+  ctx.filter = 'blur(5px)';
+  for (let i = 0; i < RAINBOW_COLORS.length; i++) {
+    ctx.strokeStyle = RAINBOW_COLORS[i].color;
+    ctx.lineWidth = GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH + 2;
+    ctx.globalAlpha = gameState.isRainShower ? 0.15 : 0.5;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + i * GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH, 0, Math.PI);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Draw main rainbow arcs
+  for (let i = 0; i < RAINBOW_COLORS.length; i++) {
+    ctx.strokeStyle = RAINBOW_COLORS[i].color;
+    ctx.lineWidth = GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH;
+    ctx.globalAlpha = gameState.isRainShower ? 0.2 : 0.6;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + i * GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH, 0, Math.PI);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Draw moonbow
+export function drawMoonbow(ctx: CanvasRenderingContext2D, gameState: GameState, focusMode = false) {
+  const centerX = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_X : GAME_CONSTANTS.RAINBOW_CENTER_X;
+  const centerY = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_CENTER_Y : GAME_CONSTANTS.RAINBOW_CENTER_Y;
+  const radius = focusMode ? GAME_CONSTANTS.FOCUS_RAINBOW_BASE_RADIUS : GAME_CONSTANTS.RAINBOW_BASE_RADIUS;
+
+  // Add glow effect
+  ctx.save();
+  ctx.filter = 'blur(5px)';
+  for (let i = 0; i < MOONBOW_COLORS.length; i++) {
+    ctx.strokeStyle = MOONBOW_COLORS[i].color;
+    ctx.lineWidth = GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH + 2;
+    ctx.globalAlpha = gameState.isRainShower ? 0.15 : 0.5;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + i * GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH, 0, Math.PI);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Draw main moonbow arcs
+  for (let i = 0; i < MOONBOW_COLORS.length; i++) {
+    ctx.strokeStyle = MOONBOW_COLORS[i].color;
+    ctx.lineWidth = GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH;
+    ctx.globalAlpha = gameState.isRainShower ? 0.2 : 0.7;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + i * GAME_CONSTANTS.RAINBOW_SEGMENT_WIDTH, 0, Math.PI);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
 
 // Draw cloud with shield and invincibility effects

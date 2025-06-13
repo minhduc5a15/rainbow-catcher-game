@@ -416,6 +416,9 @@ export default function RainbowCatcher() {
           return;
         }
 
+        // Play the bonk sound effect
+        playSound('bonk');
+
         // Take damage: lose life, activate invincibility frames, reset perfect rainbow
         damageFlashRef.current = GAME_CONSTANTS.DAMAGE_FLASH_DURATION;
         createDamageText(cloudRef.current.x, cloudRef.current.y - 30);
@@ -463,6 +466,24 @@ export default function RainbowCatcher() {
           score: gameState.score + 30,
         });
       } else if (drop.type === 'hail') {
+
+        // check if the cloud is shielded
+        if (cloudRef.current.isShielded) {
+          // Shield blocks hail, no effect
+          createPerfectRainbowEffect(drop.x, drop.y); // Explosion effect
+          gameState.setScore(gameState.score + 25); // Bonus points for blocking
+          return;
+        }
+
+        // Check if the cloud is invincible
+        if (cloudRef.current.isInvincible) {
+          // Invincibility frames - no damage taken
+          return;
+        }
+
+        // Play frozen drop sound
+        playSound('frozenDrop');
+
         // Hail: freeze cloud immediately
         cloudRef.current.isFrozen = true;
         cloudRef.current.speedMultiplier = 1;
@@ -519,6 +540,9 @@ export default function RainbowCatcher() {
           score: gameState.score + 20,
         });
       } else {
+
+        playSound('normalDrop');
+
         // Normal drop logic
         let points = GAME_CONSTANTS.NORMAL_DROP_POINTS;
         let perfectRainbow = false;
@@ -560,6 +584,7 @@ export default function RainbowCatcher() {
     clearParticles();
     clearDamageTexts();
     clearWeatherEffects();
+    stopAllSounds();
     damageFlashRef.current = 0;
     newGlobalRecordRef.current = false;
 
@@ -903,7 +928,7 @@ export default function RainbowCatcher() {
 
       <div className="mt-4 text-center text-white/90 text-sm bg-black/20 rounded-lg p-3">
         <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
-        <p>⚡ Golden = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
+        <p>⚡ Lightning = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
         <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm | 🛡️ Shield = Protection</p>
         <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock) | ⏸️ Press Space to pause | 🎯 Press F11 for Focus Mode</p>
       </div>

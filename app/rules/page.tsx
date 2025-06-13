@@ -51,7 +51,7 @@ export default function GameRules() {
                 <p className="flex items-center gap-2">
                   <span className="text-2xl">⚡</span>
                   <span>
-                    <strong>Golden Drop:</strong> Speed boost for 5 seconds
+                    <strong>Lightning Drop:</strong> Speed boost for 5 seconds
                   </span>
                 </p>
                 <p className="flex items-center gap-2">

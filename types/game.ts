@@ -87,9 +87,8 @@ export interface GameState {
   showShieldMessage: boolean; // New: shield message
   shieldMessageEndTime: number; // New: shield message timer
   timeOfDay: 'day' | 'night';
-  // Remove automatic rain shower system
   manualRainShowerOnly: boolean;
-  // New pause state
+  // New: pause state
   isPaused?: boolean;
 }
 
@@ -128,4 +127,14 @@ export const RAINBOW_COLORS = [
   { name: 'Blue', color: '#0000FF', index: 4 },
   { name: 'Indigo', color: '#4B0082', index: 5 },
   { name: 'Violet', color: '#9400D3', index: 6 },
+];
+
+export const MOONBOW_COLORS = [
+  { name: 'Silver Red', color: '#B0A8A8', index: 0 },
+  { name: 'Silver Orange', color: '#B0B0A0', index: 1 },
+  { name: 'Silver Yellow', color: '#B0B8A0', index: 2 },
+  { name: 'Silver Green', color: '#A0B8A0', index: 3 },
+  { name: 'Silver Blue', color: '#A0B0B8', index: 4 },
+  { name: 'Silver Indigo', color: '#A8A0B8', index: 5 },
+  { name: 'Silver Violet', color: '#B0A0B8', index: 6 },
 ];
