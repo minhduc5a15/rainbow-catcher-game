@@ -31,6 +31,7 @@ export default function RainbowCatcher() {
   // Thêm state cho meteorite effects và screen shake:
   const [meteoriteActive, setMeteoriteActive] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Use Zustand store
   const gameState = useGameStore();
@@ -170,10 +171,30 @@ export default function RainbowCatcher() {
     [gameState],
   );
 
-  // Handle focus mode toggle
-  const toggleFocusMode = useCallback(() => {
+  // Handle fullscreen functionality
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error('Error toggling fullscreen:', error);
+    }
+  }, []);
+
+  // Handle focus mode toggle with fullscreen
+  const toggleFocusMode = useCallback(async () => {
     const newFocusMode = !gameState.focusMode;
     gameState.setFocusMode(newFocusMode);
+
+    // Toggle fullscreen along with focus mode
+    if (newFocusMode && !document.fullscreenElement) {
+      await toggleFullscreen();
+    } else if (!newFocusMode && document.fullscreenElement) {
+      await toggleFullscreen();
+    }
 
     // Update cloud position constraints
     const cloudProps = newFocusMode
@@ -196,7 +217,7 @@ export default function RainbowCatcher() {
     } else if (cloudRef.current.x > cloudProps.maxX) {
       cloudRef.current.x = cloudProps.maxX;
     }
-  }, [gameState]);
+  }, [gameState, toggleFullscreen]);
 
   const updateGame = useCallback(() => {
     if (gameState.state !== 'playing' || gameState.isPaused) return;
@@ -738,6 +759,38 @@ export default function RainbowCatcher() {
     };
   }, [gameState.state, updateGame]);
 
+  // Handle fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isCurrentlyFullscreen);
+
+      // If user exits fullscreen manually, also exit focus mode
+      if (!isCurrentlyFullscreen && gameState.focusMode) {
+        gameState.setFocusMode(false);
+
+        // Update cloud position constraints back to normal mode
+        const cloudProps = {
+          y: GAME_CONSTANTS.CLOUD_Y_POSITION,
+          minX: GAME_CONSTANTS.CLOUD_MIN_X,
+          maxX: GAME_CONSTANTS.CLOUD_MAX_X,
+        };
+
+        cloudRef.current.y = cloudProps.y;
+
+        // Adjust cloud X position if it's outside new bounds
+        if (cloudRef.current.x < cloudProps.minX) {
+          cloudRef.current.x = cloudProps.minX;
+        } else if (cloudRef.current.x > cloudProps.maxX) {
+          cloudRef.current.x = cloudProps.maxX;
+        }
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [gameState]);
+
   // Keyboard controls for pause and focus mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -905,15 +958,6 @@ export default function RainbowCatcher() {
   // Add screen shake class with proper shake animation
   const getContainerClass = () => {
     return screenShake ? 'screen-shake' : '';
-  };
-
-  // Update background class to support day/night cycle
-  const getBackgroundClassOld = () => {
-    if (gameState.timeOfDay === 'night') {
-      return gameState.isRainShower ? 'bg-gradient-to-br from-gray-900 via-black to-gray-800' : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-black';
-    } else {
-      return gameState.isRainShower ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' : 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500';
-    }
   };
 
   const canvasDimensions = getCanvasDimensions();
