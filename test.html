@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic Meteor Shower with Larger Fire Trail</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            background: #000022;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="meteorCanvas" width="1200" height="800"></canvas>
+    <script>
+        const canvas = document.getElementById('meteorCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Tham số vật lý
+        const g = 0.05; // Giảm gia tốc trọng trường để rơi chậm hơn
+        const spawnInterval = 5000;
+        const meteors = [];
+
+        // Lớp thiên thạch
+        class Meteor {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = 0;
+                this.vx = (Math.random() - 0.5) * 4; // Vận tốc ngang giảm
+                this.vy = Math.random() * 1 + 1; // Vận tốc dọc ban đầu giảm (1-2 pixel/frame)
+                this.size = Math.random() * 20 + 20; // Kích thước lớn (20-40 pixel)
+                this.angle = Math.random() * Math.PI * 2;
+                this.trailLength = this.size * 15; // Tăng độ dài vệt lửa
+            }
+
+            update() {
+                this.vy += g; // Tăng vận tốc dọc chậm hơn
+                this.x += this.vx;
+                this.y += this.vy;
+                this.angle += 0.02; // Xoay chậm để tự nhiên
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Vẽ vệt lửa (rất lớn và sáng)
+                const gradient = ctx.createLinearGradient(
+                    0, 0,
+                    -this.vx * 6, -this.vy * 6 // Kéo dài vệt
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); // Trắng sáng
+                gradient.addColorStop(0.2, 'rgba(255, 220, 120, 0.9)'); // Vàng sáng
+                gradient.addColorStop(0.5, 'rgba(255, 120, 60, 0.8)'); // Đỏ cam
+                gradient.addColorStop(1, 'rgba(200, 50, 0, 0)'); // Mờ dần
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-this.vx * 6, -this.vy * 6);
+                ctx.lineTo(-this.vx * 3, -this.vy * 3 - this.size * 1.5); // Tăng độ rộng
+                ctx.lineTo(-this.vx * 3, -this.vy * 3 + this.size * 1.5);
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Vẽ thiên thạch hình cầu với bề mặt gồ ghề
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = '#4a4a4a';
+                ctx.fill();
+                ctx.strokeStyle = '#6a6a6a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Bề mặt gồ ghề: thêm các mảng sáng/tối
+                for (let i = 0; i < 10; i++) {
+                    const offsetX = (Math.random() - 0.5) * this.size * 0.8;
+                    const offsetY = (Math.random() - 0.5) * this.size * 0.8;
+                    const radius = this.size * (0.1 + Math.random() * 0.2);
+                    ctx.beginPath();
+                    ctx.arc(offsetX, offsetY, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(100, 100, 100, 0.5)' : 'rgba(30, 30, 30, 0.5)';
+                    ctx.fill();
+                }
+
+                // Debug: Vòng sáng
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size * 1.2, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            isOffScreen() {
+                return this.y > canvas.height + this.size ||
+                       this.x < -this.size || 
+                       this.x > canvas.width + this.size;
+            }
+        }
+
+        // Tạo thiên thạch mới mỗi 5 giây
+        setInterval(() => {
+            meteors.push(new Meteor());
+        }, spawnInterval);
+
+        // Vòng lặp animation
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = meteors.length - 1; i >= 0; i--) {
+                const meteor = meteors[i];
+                meteor.update();
+                meteor.draw();
+                if (meteor.isOffScreen()) {
+                    meteors.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

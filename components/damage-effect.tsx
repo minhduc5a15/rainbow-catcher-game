@@ -7,17 +7,19 @@ interface DamageText {
   y: number;
   life: number;
   maxLife: number;
+  damage: number;
 }
 
 export function useDamageEffect() {
   const damageTextsRef = useRef<DamageText[]>([]);
 
-  const createDamageText = useCallback((x: number, y: number) => {
+  const createDamageText = useCallback((x: number, y: number, damage = 1) => {
     const damageText: DamageText = {
       x,
       y,
       life: 60,
       maxLife: 60,
+      damage, // Store damage amount
     };
     damageTextsRef.current.push(damageText);
   }, []);
@@ -37,15 +39,15 @@ export function useDamageEffect() {
         continue;
       }
 
-      // Draw
+      // Draw with appropriate damage number
       ctx.globalAlpha = text.life / text.maxLife;
-      ctx.fillStyle = '#FF0000';
-      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = text.damage > 1 ? '#FF0000' : '#FF6666'; // Darker red for higher damage
+      ctx.font = text.damage > 1 ? 'bold 32px Arial' : 'bold 24px Arial'; // Larger for higher damage
       ctx.textAlign = 'center';
       ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 2;
-      ctx.strokeText('-1', text.x, text.y);
-      ctx.fillText('-1', text.x, text.y);
+      ctx.lineWidth = text.damage > 1 ? 3 : 2;
+      ctx.strokeText(`-${text.damage}`, text.x, text.y);
+      ctx.fillText(`-${text.damage}`, text.x, text.y);
     }
     ctx.globalAlpha = 1;
   }, []);

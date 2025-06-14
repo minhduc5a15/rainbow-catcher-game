@@ -16,6 +16,7 @@ import {
   drawReverseDrop,
   drawDoublePointsDrop,
   drawShieldDrop,
+  drawMeteoriteDrop,
   drawNormalDrop,
   drawCloud,
   drawRainbow,
@@ -58,7 +59,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ dropPosition }) => {
 export default GameCanvas;
 
 export function useGameCanvas() {
-  const drawColorDrop = useCallback((ctx: CanvasRenderingContext2D, drop: Drop, isTargetColor = false) => {
+  const drawDrop = useCallback((ctx: CanvasRenderingContext2D, drop: Drop, isTargetColor = false) => {
     ctx.save();
 
     // Apply 3D transformations
@@ -115,6 +116,9 @@ export function useGameCanvas() {
         break;
       case 'shield':
         drawShieldDrop(ctx);
+        break;
+      case 'meteorite':
+        drawMeteoriteDrop(ctx, drop);
         break;
       default:
         drawNormalDrop(ctx, drop.color);
@@ -571,15 +575,22 @@ export function useGameCanvas() {
       drawStars?: (ctx: CanvasRenderingContext2D) => void,
       isLightningFlash?: boolean,
       focusMode = false,
+      meteoriteActive = false, // New parameter
     ) => {
       // Get canvas dimensions based on focus mode
       const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
       const canvasHeight = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_HEIGHT : GAME_CONSTANTS.CANVAS_HEIGHT;
 
-      // Enhanced sky gradient with day/night cycle
+      // Enhanced sky gradient with day/night cycle and meteorite effect
       const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
 
-      if (isLightningFlash) {
+      if (meteoriteActive) {
+        // Dark apocalyptic sky when meteorite is active
+        gradient.addColorStop(0, '#1a0000');
+        gradient.addColorStop(0.3, '#330000');
+        gradient.addColorStop(0.7, '#4d0000');
+        gradient.addColorStop(1, '#660000');
+      } else if (isLightningFlash) {
         // Lightning flash effect
         gradient.addColorStop(0, '#F0F0C0');
         gradient.addColorStop(0.5, '#E0E0A0');
@@ -612,8 +623,8 @@ export function useGameCanvas() {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-      // Draw stars for nighttime
-      if (gameState.timeOfDay === 'night' && !gameState.isRainShower && drawStars) {
+      // Draw stars for nighttime (but not during meteorite)
+      if (gameState.timeOfDay === 'night' && !gameState.isRainShower && !meteoriteActive && drawStars) {
         drawStars(ctx);
       }
 
@@ -622,11 +633,13 @@ export function useGameCanvas() {
         drawWeatherEffects(ctx, gameState.timeOfDay);
       }
 
-      // Draw rainbow or moonbow based on timeOfDay
-      if (gameState.timeOfDay === 'day') {
-        drawRainbow(ctx, gameState, focusMode);
-      } else {
-        drawMoonbow(ctx, gameState, focusMode);
+      // Draw rainbow or moonbow based on timeOfDay (but not during meteorite)
+      if (!meteoriteActive) {
+        if (gameState.timeOfDay === 'day') {
+          drawRainbow(ctx, gameState, focusMode);
+        } else {
+          drawMoonbow(ctx, gameState, focusMode);
+        }
       }
 
       // Enhanced rain effect - adjust for canvas size
@@ -662,17 +675,18 @@ export function useGameCanvas() {
       isLightningFlash: boolean,
       isDamaged = false,
       focusMode = false,
+      meteoriteActive = false, // New parameter
     ) => {
       const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
       const canvasHeight = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_HEIGHT : GAME_CONSTANTS.CANVAS_HEIGHT;
 
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      drawBackground(ctx, gameState, drawWeatherEffects, drawStars, isLightningFlash, focusMode);
+      drawBackground(ctx, gameState, drawWeatherEffects, drawStars, isLightningFlash, focusMode, meteoriteActive);
 
       // Draw drops with target color highlighting
       drops.forEach((drop) => {
         const isTargetColor = drop.type === 'normal' && drop.colorIndex === gameState.nextColorIndex;
-        drawColorDrop(ctx, drop, isTargetColor);
+        drawDrop(ctx, drop, isTargetColor);
       });
 
       drawCloud(ctx, cloud, isDamaged);
@@ -742,7 +756,7 @@ export function useGameCanvas() {
         ctx.fillText('Click to lock cursor (ESC to unlock)', centerX, instructionY + 5);
       }
     },
-    [drawBackground, drawColorDrop, drawPowerUpTimers, drawPowerUpMessages],
+    [drawBackground, drawDrop, drawPowerUpTimers, drawPowerUpMessages],
   );
 
   return { renderGame };

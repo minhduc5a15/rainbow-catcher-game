@@ -65,6 +65,11 @@ export function useDropSystem() {
         color = '#32CD32';
         colorIndex = -10;
         break;
+      case 'meteorite':
+        color = '#FF4500';
+        colorIndex = -11;
+        speedMultiplier = GAME_CONSTANTS.METEORITE_SPEED_MULTIPLIER;
+        break;
       default:
         const randomColor = RAINBOW_COLORS[Math.floor(Math.random() * RAINBOW_COLORS.length)];
         color = randomColor.color;
@@ -83,18 +88,41 @@ export function useDropSystem() {
       id: `drop_${dropIdCounter.current++}`,
       // 3D effects
       scale: 0.8 + Math.random() * 0.4,
-      rotation: dropType !== "shield" ? Math.random() * Math.PI * 2 : 0,
+      rotation: dropType !== 'shield' ? Math.random() * Math.PI * 2 : 0,
       shadowOffset: Math.random() * GAME_CONSTANTS.SHADOW_OFFSET_MAX,
     };
 
     // Add rocket-specific properties with improved cloud tracking
     if (dropType === 'rocket') {
       drop.angle = Math.random() * Math.PI * 2;
-      drop.amplitude = 20 + Math.random() * 30; // Reduced amplitude for better tracking
-      drop.frequency = 0.02 + Math.random() * 0.01; // Slower frequency
+      drop.amplitude = 15 + Math.random() * 20; // Reduced amplitude further
+      drop.frequency = 0.015 + Math.random() * 0.008; // Slower frequency
       drop.startY = drop.y;
-      // Start rocket closer to cloud X position for better tracking
-      drop.x = cloudX + (Math.random() - 0.5) * 150; // Reduced spread
+      // Start rocket much closer to cloud X position for better tracking
+      drop.x = cloudX + (Math.random() - 0.5) * 100; // Much reduced spread
+    }
+
+    // Add meteorite-specific properties
+    if (dropType === 'meteorite') {
+      // Determine spawn side and target
+      const spawnFromLeft = Math.random() < 0.5;
+
+      if (spawnFromLeft) {
+        // Spawn from left third, target right third
+        drop.x = Math.random() * (canvasWidth / 3);
+        drop.targetX = (canvasWidth * 2) / 3 + Math.random() * (canvasWidth / 3);
+        drop.direction = 'left-to-right';
+      } else {
+        // Spawn from right third, target left third
+        drop.x = (canvasWidth * 2) / 3 + Math.random() * (canvasWidth / 3);
+        drop.targetX = Math.random() * (canvasWidth / 3);
+        drop.direction = 'right-to-left';
+      }
+
+      drop.startX = drop.x;
+      drop.y = -100; // Start higher up
+      drop.trailParticles = [];
+      drop.hasHitGround = false; // New property to track if meteorite hit ground
     }
 
     return drop;
@@ -115,6 +143,11 @@ export function useDropSystem() {
     cumulativeProbability += GAME_CONSTANTS.HEART_DROP_CHANCE;
     if (rand <= cumulativeProbability) {
       return 'heart';
+    }
+
+    cumulativeProbability += GAME_CONSTANTS.METEORITE_DROP_CHANCE;
+    if (rand <= cumulativeProbability) {
+      return 'meteorite';
     }
 
     // Shield drop (between heart and lightning)
@@ -224,6 +257,7 @@ export function useDropSystem() {
 
       // Get cloud Y position based on focus mode
       const cloudY = focusMode ? GAME_CONSTANTS.FOCUS_CLOUD_Y_POSITION : GAME_CONSTANTS.CLOUD_Y_POSITION;
+      const canvasHeight = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_HEIGHT : GAME_CONSTANTS.CANVAS_HEIGHT;
 
       // Update drop movements
       dropsRef.current.forEach((drop) => {
@@ -239,7 +273,7 @@ export function useDropSystem() {
           // Rainbow drop complex pattern
           drop.x += Math.sin(drop.y * 0.01) * 2;
         } else if (drop.type === 'rocket') {
-          // Improved rocket movement with better tracking
+          // Improved rocket movement with much better tracking
           if (drop.angle !== undefined && drop.amplitude !== undefined && drop.frequency !== undefined && drop.startY !== undefined) {
             drop.angle += drop.frequency;
 
@@ -254,26 +288,79 @@ export function useDropSystem() {
               const directionX = deltaX / distance;
               const directionY = deltaY / distance;
 
-              // Improved movement with better balance between X and Y
-              const oscillation = Math.sin(drop.angle) * drop.amplitude * 0.2; // Reduced oscillation
+              // Much reduced oscillation and better boundary checking
+              const oscillation = Math.sin(drop.angle) * drop.amplitude * 0.1; // Much reduced oscillation
 
-              // More balanced movement - slower Y, more responsive X
-              const moveX = directionX * drop.speed * GAME_CONSTANTS.ROCKET_X_SPEED_FACTOR * GAME_CONSTANTS.ROCKET_TRACKING_STRENGTH + oscillation;
+              // More direct movement towards cloud
+              const moveX = directionX * drop.speed * 0.6 + oscillation; // Increased tracking strength
               const moveY = Math.max(
-                drop.speed * GAME_CONSTANTS.ROCKET_Y_SPEED_FACTOR, // Minimum Y movement
-                directionY * drop.speed * GAME_CONSTANTS.ROCKET_Y_SPEED_FACTOR,
+                drop.speed * 0.4, // Minimum Y movement
+                directionY * drop.speed * 0.4,
               );
 
-              drop.x += moveX;
+              // Check boundaries before moving
+              const newX = drop.x + moveX;
+              const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
+
+              // Only move X if it won't hit boundaries, otherwise move more towards center
+              if (newX >= 20 && newX <= canvasWidth - 20) {
+                drop.x = newX;
+              } else {
+                // If hitting boundary, move towards center instead
+                const centerX = canvasWidth / 2;
+                const toCenterX = centerX - drop.x;
+                drop.x += toCenterX * 0.1; // Gentle movement towards center
+              }
+
               drop.y += moveY;
             } else {
               // Fallback movement
-              drop.y += drop.speed * GAME_CONSTANTS.ROCKET_Y_SPEED_FACTOR;
+              drop.y += drop.speed * 0.4;
+            }
+          }
+        } else if (drop.type === 'meteorite') {
+          // Meteorite diagonal movement
+          if (drop.targetX !== undefined && drop.startX !== undefined) {
+            const progress = (drop.y + 100) / (canvasHeight + 200); // Progress from 0 to 1
+            const targetProgress = Math.min(progress, 1);
+
+            // Calculate current X position based on progress
+            drop.x = drop.startX + (drop.targetX - drop.startX) * targetProgress;
+
+            // Update trail particles
+            if (!drop.trailParticles) drop.trailParticles = [];
+
+            // Add new trail particle
+            drop.trailParticles.push({
+              x: drop.x + (Math.random() - 0.5) * 20,
+              y: drop.y + (Math.random() - 0.5) * 20,
+              life: 30,
+            });
+
+            // Update existing trail particles
+            drop.trailParticles = drop.trailParticles.filter((particle) => {
+              particle.life--;
+              return particle.life > 0;
+            });
+
+            // Check if meteorite hit the ground
+            if (drop.y > canvasHeight && !drop.hasHitGround) {
+              drop.hasHitGround = true;
+              // Trigger screen shake effect
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('meteoriteImpact'));
+              }
             }
 
-            // Keep rocket within canvas bounds
-            const canvasWidth = focusMode ? GAME_CONSTANTS.FOCUS_CANVAS_WIDTH : GAME_CONSTANTS.CANVAS_WIDTH;
-            drop.x = Math.max(20, Math.min(canvasWidth - 20, drop.x));
+            // Destroy other drops in path (but don't remove meteorite itself)
+            const meteoriteRadius = GAME_CONSTANTS.METEORITE_RADIUS;
+            dropsRef.current = dropsRef.current.filter((otherDrop) => {
+              if (otherDrop.id === drop.id || otherDrop.type === 'meteorite') return true;
+
+              const distance = Math.sqrt(Math.pow(otherDrop.x - drop.x, 2) + Math.pow(otherDrop.y - drop.y, 2));
+
+              return distance > meteoriteRadius;
+            });
           }
         }
       });

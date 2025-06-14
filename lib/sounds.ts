@@ -37,6 +37,14 @@ const sounds: Record<string, Howl> = {
       console.log('Frozen drop sound loaded');
     },
   }),
+
+  reverseDrop: new Howl({
+    src: ['sounds/reverse-drop.mp3'],
+    preload: true,
+    onload: () => {
+      console.log('Reverse drop sound loaded');
+    },
+  }),
 };
 
 export const playSound = (name: string) => {

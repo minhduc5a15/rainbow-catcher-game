@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { Cloud, Drop } from '@/types/game';
@@ -27,6 +27,10 @@ export default function RainbowCatcher() {
   const highScoreRef = useRef<number>(0);
   const showGameOverDialogRef = useRef<boolean>(false);
   const newGlobalRecordRef = useRef<boolean>(false);
+
+  // Thêm state cho meteorite effects và screen shake:
+  const [meteoriteActive, setMeteoriteActive] = useState(false);
+  const [screenShake, setScreenShake] = useState(false);
 
   // Use Zustand store
   const gameState = useGameStore();
@@ -84,8 +88,21 @@ export default function RainbowCatcher() {
   const checkCollision = useCallback((cloud: Cloud, drop: Drop): boolean => {
     const cloudCenterX = cloud.x;
     const cloudCenterY = cloud.y;
+
+    // Use different collision radius for meteorite - make it more accurate
+    let collisionRadius: number;
+    let dropRadius: number;
+
+    if (drop.type === 'meteorite') {
+      collisionRadius = GAME_CONSTANTS.CLOUD_COLLISION_RADIUS;
+      dropRadius = GAME_CONSTANTS.METEORITE_RADIUS * 0.7; // Use 70% of visual radius for more accurate collision
+    } else {
+      collisionRadius = GAME_CONSTANTS.CLOUD_COLLISION_RADIUS;
+      dropRadius = GAME_CONSTANTS.DROP_RADIUS;
+    }
+
     const distance = Math.sqrt(Math.pow(drop.x - cloudCenterX, 2) + Math.pow(drop.y - cloudCenterY, 2));
-    return distance < GAME_CONSTANTS.CLOUD_COLLISION_RADIUS;
+    return distance < collisionRadius + dropRadius;
   }, []);
 
   const loadHighScore = useCallback(() => {
@@ -300,18 +317,10 @@ export default function RainbowCatcher() {
 
     // Check for day/night cycle change
     const currentCycle = Math.floor(gameState.perfectRainbowCount / GAME_CONSTANTS.PERFECT_RAINBOWS_FOR_SCENE_CHANGE);
-    const sceneIndex = currentCycle % 2;
-    let newTimeOfDay: 'day' | 'night';
+    let newTimeOfDay: 'day' | 'night' = 'day';
 
-    switch (sceneIndex) {
-      case 0:
-        newTimeOfDay = 'day';
-        break;
-      case 1:
-        newTimeOfDay = 'night';
-        break;
-      default:
-        newTimeOfDay = 'day';
+    if (currentCycle > GAME_CONSTANTS.PERFECT_RAINBOWS_FOR_SCENE_CHANGE) {
+      newTimeOfDay = 'night';
     }
 
     if (newTimeOfDay !== gameState.timeOfDay) {
@@ -353,9 +362,19 @@ export default function RainbowCatcher() {
 
       // Check collision
       if (checkCollision(cloud, drop)) {
-        handleDropCatch(drop, now);
-        drops.splice(i, 1);
-        continue;
+        // For meteorite, only remove if cloud is not invincible
+        if (drop.type === 'meteorite' && cloud.isInvincible) {
+          // Don't remove meteorite, let it pass through
+          handleDropCatch(drop, now);
+          continue;
+        } else {
+          handleDropCatch(drop, now);
+          // Remove all drops except meteorite when invincible
+          if (!(drop.type === 'meteorite' && cloud.isInvincible)) {
+            drops.splice(i, 1);
+          }
+          continue;
+        }
       }
 
       // Remove drops that fell off screen (use current canvas height)
@@ -380,6 +399,7 @@ export default function RainbowCatcher() {
       isLightningFlash(),
       damageFlashRef.current > 0,
       gameState.focusMode,
+      meteoriteActive, // Add this parameter
     );
   }, [
     gameState,
@@ -396,6 +416,7 @@ export default function RainbowCatcher() {
     drawWeatherEffects,
     drawStars,
     isLightningFlash,
+    meteoriteActive,
   ]);
 
   const handleDropCatch = useCallback(
@@ -421,7 +442,7 @@ export default function RainbowCatcher() {
 
         // Take damage: lose life, activate invincibility frames, reset perfect rainbow
         damageFlashRef.current = GAME_CONSTANTS.DAMAGE_FLASH_DURATION;
-        createDamageText(cloudRef.current.x, cloudRef.current.y - 30);
+        createDamageText(cloudRef.current.x, cloudRef.current.y - 30, 1);
         createRainbowLostEffect(cloudRef.current.x, cloudRef.current.y);
         resetPerfectRainbow(true);
 
@@ -442,6 +463,56 @@ export default function RainbowCatcher() {
           gameState.updateGameState({
             lives: newLives,
             cloudInvincibilityEndTime: now + GAME_CONSTANTS.INVINCIBILITY_DURATION,
+          });
+        }
+      } else if (drop.type === 'meteorite') {
+        // Check if cloud is protected
+        if (cloudRef.current.isShielded) {
+          // Shield blocks meteorite damage
+          createPerfectRainbowEffect(drop.x, drop.y);
+          gameState.setScore(gameState.score + 50); // Bonus points for blocking meteorite
+          return;
+        }
+
+        if (cloudRef.current.isInvincible) {
+          // Invincibility frames - meteorite passes through, no damage taken
+          // Don't remove the meteorite, let it continue
+          return;
+        }
+
+        // Play the bonk sound effect (more intense)
+        playSound('bonk');
+
+        // Meteorite deals 2 damage with enhanced effects
+        damageFlashRef.current = GAME_CONSTANTS.DAMAGE_FLASH_DURATION * 2; // Longer flash
+
+        // Create multiple damage texts for 2 damage
+        createDamageText(cloudRef.current.x - 15, cloudRef.current.y - 30, 1);
+        createDamageText(cloudRef.current.x + 15, cloudRef.current.y - 30, 1);
+
+        // Enhanced explosion effect
+        createRainbowLostEffect(cloudRef.current.x, cloudRef.current.y);
+        createPerfectRainbowEffect(cloudRef.current.x, cloudRef.current.y); // Double explosion
+
+        resetPerfectRainbow(true);
+
+        // Activate invincibility frames
+        cloudRef.current.isInvincible = true;
+
+        const newLives = gameState.lives - GAME_CONSTANTS.METEORITE_DAMAGE;
+        if (newLives <= 0) {
+          saveHighScore(gameState.score);
+          showGameOverDialogRef.current = true;
+          stopAllSounds();
+          // Release pointer lock immediately on game over
+          if (document.pointerLockElement) {
+            document.exitPointerLock();
+          }
+          gameState.updateGameState({ lives: 0, state: 'gameOver' });
+        } else {
+          gameState.updateGameState({
+            lives: newLives,
+            cloudInvincibilityEndTime: now + GAME_CONSTANTS.INVINCIBILITY_DURATION * 1.5, // Longer invincibility
           });
         }
       } else if (drop.type === 'shield') {
@@ -466,7 +537,6 @@ export default function RainbowCatcher() {
           score: gameState.score + 30,
         });
       } else if (drop.type === 'hail') {
-
         // check if the cloud is shielded
         if (cloudRef.current.isShielded) {
           // Shield blocks hail, no effect
@@ -496,6 +566,21 @@ export default function RainbowCatcher() {
           freezeMessageEndTime: now + 1500,
         });
       } else if (drop.type === 'reverse') {
+        // Check if the cloud is shielded
+        if (cloudRef.current.isShielded) {
+          createPerfectRainbowEffect(drop.x, drop.y); // Explosion effect
+          gameState.setScore(gameState.score + 25); // Bonus points for blocking
+          return;
+        }
+
+        if (cloudRef.current.isInvincible) {
+          // Invincibility frames - no damage taken
+          return;
+        }
+
+        // Player reverse drop sound
+        playSound('reverseDrop');
+
         // Reverse: reverse cloud controls
         cloudRef.current.isReversed = true;
         cloudRef.current.isFrozen = false;
@@ -540,7 +625,6 @@ export default function RainbowCatcher() {
           score: gameState.score + 20,
         });
       } else {
-
         playSound('normalDrop');
 
         // Normal drop logic
@@ -765,8 +849,66 @@ export default function RainbowCatcher() {
     loadHighScore();
   }, [loadHighScore]);
 
-  // Update background class to support day/night cycle
+  // Add meteorite effect listener
+  useEffect(() => {
+    const handleMeteoriteSpawn = () => {
+      setMeteoriteActive(true);
+    };
+
+    const handleMeteoriteImpact = () => {
+      setMeteoriteActive(false);
+      setScreenShake(true);
+      setTimeout(() => setScreenShake(false), 1500);
+    };
+
+    window.addEventListener('meteoriteSpawn', handleMeteoriteSpawn);
+    window.addEventListener('meteoriteImpact', handleMeteoriteImpact);
+
+    return () => {
+      window.removeEventListener('meteoriteSpawn', handleMeteoriteSpawn);
+      window.removeEventListener('meteoriteImpact', handleMeteoriteImpact);
+    };
+  }, []);
+
+  // Check for meteorite in drops and trigger effect
+  useEffect(() => {
+    const checkForMeteorite = () => {
+      const hasMeteorite = dropsRef.current.some((drop) => drop.type === 'meteorite');
+      if (hasMeteorite && !meteoriteActive) {
+        setMeteoriteActive(true);
+      } else if (!hasMeteorite && meteoriteActive) {
+        setMeteoriteActive(false);
+      }
+    };
+
+    const interval = setInterval(checkForMeteorite, 100);
+    return () => clearInterval(interval);
+  }, [meteoriteActive]);
+
+  // Update background class to support meteorite effect
   const getBackgroundClass = () => {
+    const baseClass = meteoriteActive ? 'bg-gradient-to-br from-gray-900 via-black to-red-900' : '';
+
+    if (!baseClass) {
+      if (gameState.timeOfDay === 'night') {
+        return gameState.isRainShower ? 'bg-gradient-to-br from-gray-900 via-black to-gray-800' : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-black';
+      } else {
+        return gameState.isRainShower
+          ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800'
+          : 'bg-gradient-to-br from-purple-400 via-pink-500 to-red-500';
+      }
+    }
+
+    return baseClass;
+  };
+
+  // Add screen shake class with proper shake animation
+  const getContainerClass = () => {
+    return screenShake ? 'screen-shake' : '';
+  };
+
+  // Update background class to support day/night cycle
+  const getBackgroundClassOld = () => {
     if (gameState.timeOfDay === 'night') {
       return gameState.isRainShower ? 'bg-gradient-to-br from-gray-900 via-black to-gray-800' : 'bg-gradient-to-br from-indigo-900 via-purple-900 to-black';
     } else {
@@ -775,182 +917,212 @@ export default function RainbowCatcher() {
   };
 
   const canvasDimensions = getCanvasDimensions();
+
+  // Add screen shake CSS
+  const screenShakeStyle = `
+  @keyframes shake {
+    0% { transform: translate(0px, 0px) rotate(0deg); }
+    10% { transform: translate(-2px, -1px) rotate(-0.5deg); }
+    20% { transform: translate(-1px, 0px) rotate(0.5deg); }
+    30% { transform: translate(2px, 1px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(0.5deg); }
+    50% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+    60% { transform: translate(-2px, 0px) rotate(0deg); }
+    70% { transform: translate(2px, 1px) rotate(-0.5deg); }
+    80% { transform: translate(-1px, -1px) rotate(0.5deg); }
+    90% { transform: translate(1px, 1px) rotate(0deg); }
+    100% { transform: translate(0px, 0px) rotate(0deg); }
+  }
+  .screen-shake {
+    animation: shake 0.15s ease-in-out infinite;
+  }
+`;
+
   // Is mobile device, render a message to use desktop
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
-        <div className="text-center p-6 bg-white/90 rounded-lg shadow-lg">
-          <h1 className="text-4xl font-bold text-purple-800 mb-4">🌈 Rainbow Catcher</h1>
-          <p className="text-lg text-gray-700 mb-6">This game is not supported on touch devices or screens smaller than {MOBILE_BREAKPOINT}px.</p>
-          <p className="text-sm text-gray-500">Please play on a desktop or laptop for the best experience!</p>
+      <>
+        <style dangerouslySetInnerHTML={{ __html: screenShakeStyle }} />
+        <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center">
+          <div className="text-center p-6 bg-white/90 rounded-lg shadow-lg">
+            <h1 className="text-4xl font-bold text-purple-800 mb-4">🌈 Rainbow Catcher</h1>
+            <p className="text-lg text-gray-700 mb-6">This game is not supported on touch devices or screens smaller than {MOBILE_BREAKPOINT}px.</p>
+            <p className="text-sm text-gray-500">Please play on a desktop or laptop for the best experience!</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
   // Focus mode layout
   if (gameState.focusMode) {
     return (
-      <div className={`min-h-screen ${getBackgroundClass()} flex items-center justify-center transition-all duration-1000`}>
-        <div className="relative">
-          {/* Focus mode stats overlay */}
-          <div className="absolute top-4 left-4 z-10 bg-black/70 rounded-lg p-3 text-white">
-            <div className="flex gap-4 text-sm">
-              <span>
-                Score: <strong className="text-blue-400">{gameState.score}</strong>
-              </span>
-              <span>
-                Lives: <strong className="text-red-400">{'❤️'.repeat(gameState.lives)}</strong>
-              </span>
-              <span>
-                Perfect: <strong className="text-purple-400">{gameState.perfectRainbowCount}</strong> 🌈
-              </span>
-              {gameState.timeOfDay === 'night' && <span className="text-indigo-400">🌙 Night</span>}
-            </div>
-          </div>
-
-          {/* Focus mode controls overlay */}
-          <div className="absolute top-4 right-4 z-10 bg-black/70 rounded-lg p-3 text-white text-sm">
-            <div className="space-y-1">
-              <p>
-                <kbd className="bg-gray-600 px-2 py-1 rounded">F11</kbd> Exit Focus Mode
-              </p>
-              <p>
-                <kbd className="bg-gray-600 px-2 py-1 rounded">Space</kbd> Pause
-              </p>
-              <p>
-                <kbd className="bg-gray-600 px-2 py-1 rounded">ESC</kbd> Unlock Cursor
-              </p>
-            </div>
-          </div>
-
-          <canvas
-            ref={canvasRef}
-            width={canvasDimensions.width}
-            height={canvasDimensions.height}
-            className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-2xl"
-            onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleCanvasClick}
-          />
-
-          {/* Pause Menu Overlay */}
-          {gameState.isPaused && <PauseMenu onContinue={handleResume} onRestart={handleRestart} />}
-
-          {/* Focus mode game UI overlay */}
-          {(gameState.state === 'menu' || gameState.state === 'gameOver') && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-              <div className="bg-white/95 rounded-lg p-8 max-w-md">
-                <GameUI
-                  gameState={gameState}
-                  highScore={highScoreRef.current}
-                  newGlobalRecord={newGlobalRecordRef.current}
-                  onStartGame={startGame}
-                  onResetGame={resetGame}
-                  showGameOverDialog={showGameOverDialogRef.current}
-                  onCloseGameOverDialog={() => (showGameOverDialogRef.current = false)}
-                />
+      <>
+        <style dangerouslySetInnerHTML={{ __html: screenShakeStyle }} />
+        <div className={`min-h-screen ${getBackgroundClass()} flex items-center justify-center transition-all duration-1000 ${getContainerClass()}`}>
+          <div className="relative">
+            {/* Focus mode stats overlay */}
+            <div className="absolute top-4 left-4 z-10 bg-black/70 rounded-lg p-3 text-white">
+              <div className="flex gap-4 text-sm">
+                <span>
+                  Score: <strong className="text-blue-400">{gameState.score}</strong>
+                </span>
+                <span>
+                  Lives: <strong className="text-red-400">{'❤️'.repeat(gameState.lives)}</strong>
+                </span>
+                <span>
+                  Perfect: <strong className="text-purple-400">{gameState.perfectRainbowCount}</strong> 🌈
+                </span>
+                {gameState.timeOfDay === 'night' && <span className="text-indigo-400">🌙 Night</span>}
               </div>
             </div>
-          )}
+
+            {/* Focus mode controls overlay */}
+            <div className="absolute top-4 right-4 z-10 bg-black/70 rounded-lg p-3 text-white text-sm">
+              <div className="space-y-1">
+                <p>
+                  <kbd className="bg-gray-600 px-2 py-1 rounded">F11</kbd> Exit Focus Mode
+                </p>
+                <p>
+                  <kbd className="bg-gray-600 px-2 py-1 rounded">Space</kbd> Pause
+                </p>
+                <p>
+                  <kbd className="bg-gray-600 px-2 py-1 rounded">ESC</kbd> Unlock Cursor
+                </p>
+              </div>
+            </div>
+
+            <canvas
+              ref={canvasRef}
+              width={canvasDimensions.width}
+              height={canvasDimensions.height}
+              className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-2xl"
+              onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleCanvasClick}
+            />
+
+            {/* Pause Menu Overlay */}
+            {gameState.isPaused && <PauseMenu onContinue={handleResume} onRestart={handleRestart} />}
+
+            {/* Focus mode game UI overlay */}
+            {(gameState.state === 'menu' || gameState.state === 'gameOver') && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                <div className="bg-white/95 rounded-lg p-8 max-w-md">
+                  <GameUI
+                    gameState={gameState}
+                    highScore={highScoreRef.current}
+                    newGlobalRecord={newGlobalRecordRef.current}
+                    onStartGame={startGame}
+                    onResetGame={resetGame}
+                    showGameOverDialog={showGameOverDialogRef.current}
+                    onCloseGameOverDialog={() => (showGameOverDialogRef.current = false)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // Normal mode layout
   return (
-    <div className={`min-h-screen ${getBackgroundClass()} flex flex-col items-center justify-center p-4 transition-all duration-1000`}>
-      <div className="text-center mb-6">
-        <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">🌈 Rainbow Catcher</h1>
-        <p className="text-white/90 text-xl">Control the cloud to catch falling rainbow colors!</p>
-        <div className="mt-2 flex gap-2 justify-center">
-          <Link href="/rules">
-            <Button variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-              📖 Game Rules
+    <>
+      <style dangerouslySetInnerHTML={{ __html: screenShakeStyle }} />
+      <div className={`min-h-screen ${getBackgroundClass()} flex flex-col items-center justify-center p-4 transition-all duration-1000 ${getContainerClass()}`}>
+        <div className="text-center mb-6">
+          <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">🌈 Rainbow Catcher</h1>
+          <p className="text-white/90 text-xl">Control the cloud to catch falling rainbow colors!</p>
+          <div className="mt-2 flex gap-2 justify-center">
+            <Link href="/rules">
+              <Button variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                📖 Game Rules
+              </Button>
+            </Link>
+            <GlobalHighScoreDisplay />
+            <Button variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30" onClick={toggleFocusMode}>
+              🎯 Focus Mode (F11)
             </Button>
-          </Link>
-          <GlobalHighScoreDisplay />
-          <Button variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30" onClick={toggleFocusMode}>
-            🎯 Focus Mode (F11)
-          </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="p-6 bg-gradient-to-br from-white/95 to-purple-100/95 backdrop-blur-sm border-4 border-purple-300 shadow-2xl relative rounded-lg">
-        <div className="flex justify-between items-center mb-4 flex-wrap gap-2 bg-gradient-to-r from-purple-100 to-pink-100 p-3 rounded-lg border-2 border-purple-200">
-          <div className="text-lg font-bold bg-blue-100 px-3 py-1 rounded-full">
-            Score: <span className="text-blue-600">{gameState.score}</span>
-          </div>
-          <div className="text-lg font-bold bg-red-100 px-3 py-1 rounded-full">
-            Lives: <span className="text-red-600">{'❤️'.repeat(gameState.lives)}</span>
-          </div>
-          <div className="text-sm bg-white px-3 py-1 rounded-full">
-            Next Color:{' '}
-            <span className="px-2 py-1 rounded text-white font-bold ml-1" style={{ backgroundColor: gameState.nextColorIndex < 7 ? '#FF0000' : '#FF0000' }}>
-              Next
-            </span>
-          </div>
-          <div className="text-sm bg-purple-100 px-3 py-1 rounded-full">
-            Perfect: <span className="text-purple-600 font-bold">{gameState.perfectRainbowCount}</span> 🌈
-          </div>
-          {gameState.timeOfDay === 'night' && (
-            <div className="text-sm bg-indigo-100 px-3 py-1 rounded-full">
-              <span className="text-indigo-600 font-bold">🌙 Night</span>
+        <div className="p-6 bg-gradient-to-br from-white/95 to-purple-100/95 backdrop-blur-sm border-4 border-purple-300 shadow-2xl relative rounded-lg">
+          <div className="flex justify-between items-center mb-4 flex-wrap gap-2 bg-gradient-to-r from-purple-100 to-pink-100 p-3 rounded-lg border-2 border-purple-200">
+            <div className="text-lg font-bold bg-blue-100 px-3 py-1 rounded-full">
+              Score: <span className="text-blue-600">{gameState.score}</span>
             </div>
-          )}
-        </div>
+            <div className="text-lg font-bold bg-red-100 px-3 py-1 rounded-full">
+              Lives: <span className="text-red-600">{'❤️'.repeat(gameState.lives)}</span>
+            </div>
+            <div className="text-sm bg-white px-3 py-1 rounded-full">
+              Next Color:{' '}
+              <span className="px-2 py-1 rounded text-white font-bold ml-1" style={{ backgroundColor: gameState.nextColorIndex < 7 ? '#FF0000' : '#FF0000' }}>
+                Next
+              </span>
+            </div>
+            <div className="text-sm bg-purple-100 px-3 py-1 rounded-full">
+              Perfect: <span className="text-purple-600 font-bold">{gameState.perfectRainbowCount}</span> 🌈
+            </div>
+            {gameState.timeOfDay === 'night' && (
+              <div className="text-sm bg-indigo-100 px-3 py-1 rounded-full">
+                <span className="text-indigo-600 font-bold">🌙 Night</span>
+              </div>
+            )}
+          </div>
 
-        <div className="relative">
-          <canvas
-            ref={canvasRef}
-            width={canvasDimensions.width}
-            height={canvasDimensions.height}
-            className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-inner"
-            onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            onClick={handleCanvasClick}
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              width={canvasDimensions.width}
+              height={canvasDimensions.height}
+              className="border-4 border-purple-400 rounded-xl bg-gradient-to-b from-sky-100 to-blue-200 cursor-none shadow-inner"
+              onMouseMove={gameState.isPointerLocked ? undefined : handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleCanvasClick}
+            />
+
+            {/* Pause Menu Overlay */}
+            {gameState.isPaused && <PauseMenu onContinue={handleResume} onRestart={handleRestart} />}
+          </div>
+
+          <GameUI
+            gameState={gameState}
+            highScore={highScoreRef.current}
+            newGlobalRecord={newGlobalRecordRef.current}
+            onStartGame={startGame}
+            onResetGame={resetGame}
+            showGameOverDialog={showGameOverDialogRef.current}
+            onCloseGameOverDialog={() => (showGameOverDialogRef.current = false)}
           />
-
-          {/* Pause Menu Overlay */}
-          {gameState.isPaused && <PauseMenu onContinue={handleResume} onRestart={handleRestart} />}
         </div>
 
-        <GameUI
-          gameState={gameState}
-          highScore={highScoreRef.current}
-          newGlobalRecord={newGlobalRecordRef.current}
-          onStartGame={startGame}
-          onResetGame={resetGame}
-          showGameOverDialog={showGameOverDialogRef.current}
-          onCloseGameOverDialog={() => (showGameOverDialogRef.current = false)}
-        />
-      </div>
+        <div className="mt-4 text-center text-white/90 text-sm bg-black/20 rounded-lg p-3">
+          <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
+          <p>⚡ Lightning = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
+          <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm | 🛡️ Shield = Protection</p>
+          <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock) | ⏸️ Press Space to pause | 🎯 Press F11 for Focus Mode</p>
+        </div>
 
-      <div className="mt-4 text-center text-white/90 text-sm bg-black/20 rounded-lg p-3">
-        <p className="font-bold">🌈 Catch rainbow colors: Red → Orange → Yellow → Green → Blue → Indigo → Violet</p>
-        <p>⚡ Lightning = Speed Boost | 💣 Black = Lose Life | 🌈 Rainbow = Auto-Collect | ❤️ Heart = Gain Life | ❄️ Hail = Freeze | 🚀 Rocket = Lose Life</p>
-        <p>⇄ Purple = Reverse Controls | ✨ Yellow = Double Points | 💧 Water = Instant Rain Storm | 🛡️ Shield = Protection</p>
-        <p className="text-xs mt-2">🖱️ Click to lock cursor (ESC to unlock) | ⏸️ Press Space to pause | 🎯 Press F11 for Focus Mode</p>
-      </div>
-
-      {/* Author Section */}
-      <div className="mt-4 text-center text-white/80 text-sm bg-black/20 rounded-lg p-3">
-        <p className="font-semibold mb-1">🎮 Created by</p>
-        <div className="flex items-center justify-center gap-4">
-          <a href="https://github.com/minhduc5a15" target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 transition-colors">
-            👨‍💻 minhduc5a15
-          </a>
-          <span className="text-white/60">|</span>
-          <a
-            href="https://github.com/minhduc5a15/rainbow-catcher-game"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-green-300 hover:text-green-200 transition-colors"
-          >
-            📂 GitHub Repository
-          </a>
+        {/* Author Section */}
+        <div className="mt-4 text-center text-white/80 text-sm bg-black/20 rounded-lg p-3">
+          <p className="font-semibold mb-1">🎮 Created by</p>
+          <div className="flex items-center justify-center gap-4">
+            <a href="https://github.com/minhduc5a15" target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 transition-colors">
+              👨‍💻 minhduc5a15
+            </a>
+            <span className="text-white/60">|</span>
+            <a
+              href="https://github.com/minhduc5a15/rainbow-catcher-game"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-300 hover:text-green-200 transition-colors"
+            >
+              📂 GitHub Repository
+            </a>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

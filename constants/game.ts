@@ -30,7 +30,8 @@ export const GAME_CONSTANTS = {
   // Drop spawn rates (percentages) - SPECIAL DROPS ONLY - Balanced
   RAINBOW_DROP_CHANCE: 0.004, // 0.4%
   HEART_DROP_CHANCE: 0.004, // 0.4%
-  SHIELD_DROP_CHANCE: 0.025, // 2.5% (between heart and lightning)
+  SHIELD_DROP_CHANCE: 0.006, // 0.6% (reduced from 0.8% to 0.6%)
+  METEORITE_DROP_CHANCE: 0.004, // 0.4% (same as rainbow and heart)
   WATER_DROP_CHANCE: 0.012, // 1.2%
 
   LIGHTNING_DROP_CHANCE: 0.05, // 5%
@@ -41,19 +42,20 @@ export const GAME_CONSTANTS = {
   BOMB_DROP_CHANCE: 0.08, // 8%
   ROCKET_DROP_CHANCE: 0.08, // 8%
 
-  // Total special drops: 0.4% + 0.4% + 2.5% + 1.2% + 5% + 5% + 5% + 3.5% + 8% + 8% = 39%, Normal drops: 61%
+  // Total special drops:
 
   // Drop speed multipliers
   BOMB_SPEED_MULTIPLIER: 1.8,
   REVERSE_SPEED_MULTIPLIER: 1.6,
   HAIL_SPEED_MULTIPLIER: 1.5,
-  ROCKET_SPEED_MULTIPLIER: 1.2,
+  ROCKET_SPEED_MULTIPLIER: 0.8, // Reduced from 1.2 to 0.8
   WATER_SPEED_MULTIPLIER: 1.2,
+  METEORITE_SPEED_MULTIPLIER: 0.4, // Increased from 0.3 to 0.4
 
   // Rocket tracking improvements
-  ROCKET_X_SPEED_FACTOR: 0.4, // Slower horizontal movement
-  ROCKET_Y_SPEED_FACTOR: 0.6, // Slower vertical movement
-  ROCKET_TRACKING_STRENGTH: 0.8, // How strongly rocket tracks cloud
+  ROCKET_X_SPEED_FACTOR: 0.6, // Increased from 0.4
+  ROCKET_Y_SPEED_FACTOR: 0.4, // Reduced from 0.6
+  ROCKET_TRACKING_STRENGTH: 1.0, // Increased from 0.8
 
   // Drop spawn timing - Moderate increase
   DROP_SPAWN_RATE_BASE: 250,
@@ -89,6 +91,7 @@ export const GAME_CONSTANTS = {
   DROP_RADIUS: 8,
   SPECIAL_DROP_RADIUS: 10,
   LARGE_DROP_RADIUS: 12,
+  METEORITE_RADIUS: 70, // Twice the size of cloud collision radius
 
   // Cloud properties - Normal mode
   CLOUD_Y_POSITION: 550,
@@ -137,4 +140,6 @@ export const GAME_CONSTANTS = {
   DROP_ROTATION_SPEED: 0.05,
   PARTICLE_Z_RANGE: 50,
   SHADOW_OFFSET_MAX: 8,
+
+  METEORITE_DAMAGE: 2, // Deals 2 damage instead of 1
 };

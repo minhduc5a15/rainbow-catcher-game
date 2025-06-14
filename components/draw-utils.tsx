@@ -40,6 +40,94 @@ export function drawShieldDrop(ctx: CanvasRenderingContext2D) {
   ctx.fillText('🛡️', 0, 4);
 }
 
+// Draw meteorite drop
+export function drawMeteoriteDrop(ctx: CanvasRenderingContext2D, drop: Drop) {
+  const time = Date.now() * 0.01;
+  const meteoriteSize = GAME_CONSTANTS.METEORITE_RADIUS;
+
+  // Draw trail particles first (behind meteorite)
+  if (drop.trailParticles) {
+    drop.trailParticles.forEach((particle) => {
+      const alpha = particle.life / 30;
+      ctx.globalAlpha = alpha * 0.8;
+
+      // Trail gradient
+      const trailGradient = ctx.createRadialGradient(particle.x - drop.x, particle.y - drop.y, 0, particle.x - drop.x, particle.y - drop.y, 15);
+      trailGradient.addColorStop(0, '#FFFF00');
+      trailGradient.addColorStop(0.5, '#FF8C00');
+      trailGradient.addColorStop(1, '#FF4500');
+
+      ctx.fillStyle = trailGradient;
+      ctx.beginPath();
+      ctx.arc(particle.x - drop.x, particle.y - drop.y, 8 * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  ctx.globalAlpha = 1;
+
+  // Main meteorite body with glowing effect
+  const glowPulse = 1 + Math.sin(time * 3) * 0.3;
+
+  // Outer glow
+  const outerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, meteoriteSize * 1.5);
+  outerGlow.addColorStop(0, 'rgba(255, 255, 0, 0.8)');
+  outerGlow.addColorStop(0.3, 'rgba(255, 140, 0, 0.6)');
+  outerGlow.addColorStop(0.7, 'rgba(255, 69, 0, 0.3)');
+  outerGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+  ctx.fillStyle = outerGlow;
+  ctx.beginPath();
+  ctx.arc(0, 0, meteoriteSize * 1.5 * glowPulse, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main meteorite body
+  const meteoriteGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, meteoriteSize);
+  meteoriteGradient.addColorStop(0, '#FFFF88');
+  meteoriteGradient.addColorStop(0.3, '#FF8C00');
+  meteoriteGradient.addColorStop(0.7, '#FF4500');
+  meteoriteGradient.addColorStop(1, '#8B0000');
+
+  ctx.fillStyle = meteoriteGradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, meteoriteSize, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner core
+  const coreGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, meteoriteSize * 0.6);
+  coreGradient.addColorStop(0, '#FFFFFF');
+  coreGradient.addColorStop(0.5, '#FFFF00');
+  coreGradient.addColorStop(1, '#FF8C00');
+
+  ctx.fillStyle = coreGradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, meteoriteSize * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Surface details (rocky texture)
+  ctx.fillStyle = 'rgba(139, 0, 0, 0.7)';
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 + time * 0.1;
+    const distance = meteoriteSize * 0.3 + Math.sin(time + i) * meteoriteSize * 0.2;
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 3 + Math.sin(time * 2 + i) * 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Atmospheric entry effect (bright edge)
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 3;
+  ctx.globalAlpha = 0.8 + Math.sin(time * 4) * 0.2;
+  ctx.beginPath();
+  ctx.arc(0, 0, meteoriteSize, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+}
+
 // Draw water drop
 export function drawWaterDrop(ctx: CanvasRenderingContext2D) {
   // Water drop with realistic water effect
@@ -242,7 +330,7 @@ export function drawRocketDrop(ctx: CanvasRenderingContext2D, drop: Drop) {
   ctx.textAlign = 'center';
   ctx.save();
   if (drop.angle !== undefined) {
-    ctx.rotate(drop.angle * 0.1);
+    // ctx.rotate(drop.angle * 0.1);
   }
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = 1;
@@ -325,7 +413,7 @@ export function drawDoublePointsDrop(ctx: CanvasRenderingContext2D) {
     const sparkleY = Math.sin(angle) * 15;
 
     ctx.save();
-    ctx.translate(sparkleX,15);
+    ctx.translate(sparkleX, sparkleY);
     ctx.rotate(time * 0.5);
     ctx.font = '8px Arial';
     ctx.textAlign = 'center';
@@ -449,7 +537,7 @@ export function drawCloud(
 
   // Handle invincibility blinking
   if (cloud.isInvincible) {
-    const blinkAlpha = + 0.7 * Math.abs(Math.sin(Date.now() * GAME_CONSTANTS.INVINCIBILITY_BLINK_SPEED));
+    const blinkAlpha = +0.7 * Math.abs(Math.sin(Date.now() * GAME_CONSTANTS.INVINCIBILITY_BLINK_SPEED));
     ctx.globalAlpha = blinkAlpha;
   }
 

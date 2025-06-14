@@ -100,6 +100,12 @@ export default function GameRules() {
                   <span className="text-2xl">🎯</span>
                   <span>Target colors glow and pulse - easier to spot!</span>
                 </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-2xl">☄️</span>
+                  <span>
+                    <strong>Meteorite:</strong> Massive obstacle, deals 2 damage & destroys other drops
+                  </span>
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -232,6 +238,10 @@ export default function GameRules() {
               <p className="flex items-center gap-2">
                 <span className="text-xl">✨</span>
                 <span>Maximize scoring during double points</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-xl">☄️</span>
+                <span>Avoid meteorites at all costs - they deal double damage!</span>
               </p>
             </div>
           </CardContent>

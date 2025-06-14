@@ -4,13 +4,19 @@ export interface Drop {
   color: string;
   colorIndex: number;
   speed: number;
-  type: 'normal' | 'lightning' | 'bomb' | 'rainbow' | 'heart' | 'hail' | 'rocket' | 'reverse' | 'double' | 'water' | 'shield';
+  type: 'normal' | 'lightning' | 'bomb' | 'rainbow' | 'heart' | 'hail' | 'rocket' | 'reverse' | 'double' | 'water' | 'shield' | 'meteorite';
   id: string;
   // Rocket-specific properties
   angle?: number;
   amplitude?: number;
   frequency?: number;
   startY?: number;
+  // Meteorite-specific properties
+  targetX?: number;
+  startX?: number;
+  direction?: 'left-to-right' | 'right-to-left';
+  trailParticles?: Array<{ x: number; y: number; life: number }>;
+  hasHitGround?: boolean; // New property for meteorite ground impact
   // 3D effect properties
   scale?: number;
   rotation?: number;
